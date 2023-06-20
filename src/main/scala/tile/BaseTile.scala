@@ -2,17 +2,16 @@
 
 package freechips.rocketchip.tile
 
-import Chisel._
-
+import chisel3._
+import chisel3.util.{log2Ceil, log2Up}
 import org.chipsalliance.cde.config._
 import freechips.rocketchip.subsystem._
 import freechips.rocketchip.diplomacy._
-
 import freechips.rocketchip.interrupts._
 import freechips.rocketchip.rocket._
 import freechips.rocketchip.tilelink._
 import freechips.rocketchip.util._
-import freechips.rocketchip.prci.{ClockSinkParameters}
+import freechips.rocketchip.prci.ClockSinkParameters
 
 case object TileVisibilityNodeKey extends Field[TLEphemeralNode]
 case object TileKey extends Field[TileParams]

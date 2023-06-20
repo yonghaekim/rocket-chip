@@ -2,10 +2,10 @@
 
 package freechips.rocketchip.diplomacy
 
-import Chisel._
-import chisel3.SyncReadMem
+import chisel3._
+import chisel3.util.log2Ceil
 import org.chipsalliance.cde.config.Parameters
-import freechips.rocketchip.util.{DescribedSRAM, Code}
+import freechips.rocketchip.util.{Code, DescribedSRAM}
 
 abstract class DiplomaticSRAM(
     val address: AddressSet,
@@ -34,7 +34,7 @@ abstract class DiplomaticSRAM(
       name = devName.getOrElse("mem"),
       desc = devName.getOrElse("mem"),
       size = size,
-      data = Vec(lanes, UInt(width = bits))
+      data = Vec(lanes, UInt(bits.W))
     )
     devName.foreach(n => mem.suggestName(n.split("-").last))
 
