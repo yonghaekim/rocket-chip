@@ -165,8 +165,8 @@ trait HasCoreIO extends HasTileParameters {
     val hartid = Input(UInt(hartIdLen.W))
     val reset_vector = Input(UInt(resetVectorLen.W))
     val interrupts = Input(new CoreInterrupts())
-    val imem  = Input(new FrontendIO)
-    val dmem = Input(new HellaCacheIO)
+    val imem  = new FrontendIO
+    val dmem = new HellaCacheIO
     val ptw = Flipped(new DatapathPTWIO())
     val fpu = Flipped(new FPUCoreIO())
     val rocc = Flipped(new RoCCCoreIO(nTotalRoCCCSRs))
