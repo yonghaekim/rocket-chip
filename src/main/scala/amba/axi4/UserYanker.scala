@@ -7,7 +7,6 @@ import chisel3.util._
 import org.chipsalliance.cde.config.Parameters
 import freechips.rocketchip.diplomacy._
 import freechips.rocketchip.util._
-import freechips.rocketchip.util.EnhancedChisel3Assign
 
 /** This adapter prunes all user bit fields of the echo type from request messages,
   * storing them in queues and echoing them back when matching response messages are received.
@@ -63,7 +62,7 @@ class AXI4UserYanker(capMaxFlight: Option[Int] = None)(implicit p: Parameters) e
       val r_valid = VecInit(rqueues.map(_.deq.valid))(rid)
       val r_bits = VecInit(rqueues.map(_.deq.bits))(rid)
       assert (!out.r.valid || r_valid) // Q must be ready faster than the response
-      in.r :<> out.r
+      in.r :<= out.r
       in.r.bits.echo :<= r_bits
 
       val arsel = UIntToOH(arid, edgeIn.master.endId).asBools
@@ -84,7 +83,7 @@ class AXI4UserYanker(capMaxFlight: Option[Int] = None)(implicit p: Parameters) e
       val b_valid = VecInit(wqueues.map(_.deq.valid))(bid)
       val b_bits = VecInit(wqueues.map(_.deq.bits))(bid)
       assert (!out.b.valid || b_valid) // Q must be ready faster than the response
-      in.b :<> out.b
+      in.b :<= out.b
       in.b.bits.echo :<= b_bits
 
       val awsel = UIntToOH(awid, edgeIn.master.endId).asBools
@@ -95,7 +94,7 @@ class AXI4UserYanker(capMaxFlight: Option[Int] = None)(implicit p: Parameters) e
         q.enq.bits :<= in.aw.bits.echo
       }
 
-      out.w :<> in.w
+      out.w :<= in.w
     }
   }
 }

@@ -349,11 +349,10 @@ sealed trait LazyModuleImpLike extends RawModule {
     val done = Set() ++ pairing.values.filter(_.size == 2).map { 
       case Seq(a, b) =>
         require(a.flipped != b.flipped)
-        // @todo <> in chisel3 makes directionless connection.
         if (a.flipped) {
-          a.data <> b.data
+          a.data :<>= b.data
         } else {
-          b.data <> a.data
+          b.data :<>= a.data
         }
         a.source
       case _ =>
@@ -366,9 +365,9 @@ sealed trait LazyModuleImpLike extends RawModule {
     // Pass the [[Dangle]]s which remained and were used to generate the [[AutoBundle]] I/O ports up to the [[parent]] [[LazyModule]]
     val dangles = (forward zip auto.elements) map { case (d, (_, io)) =>
       if (d.flipped) {
-        d.data <> io
+        d.data :<>= io
       } else {
-        io <> d.data
+        io :<>= d.data
       }
       d.copy(dataOpt = Some(io), name = wrapper.suggestedName + "_" + d.name)
     }

@@ -9,7 +9,6 @@ import freechips.rocketchip.util._
 import freechips.rocketchip.amba.axi4._
 import freechips.rocketchip.amba._
 import chisel3.util.{log2Ceil, UIntToOH, Queue, Decoupled, Cat}
-import freechips.rocketchip.util.EnhancedChisel3Assign
 
 class AXI4TLStateBundle(val sourceBits: Int) extends Bundle {
   val size   = UInt(4.W)
@@ -17,13 +16,10 @@ class AXI4TLStateBundle(val sourceBits: Int) extends Bundle {
 }
 
 case object AXI4TLState extends ControlKey[AXI4TLStateBundle]("tl_state")
-case class AXI4TLStateField(sourceBits: Int) extends BundleField(AXI4TLState) {
-  def data = Output(new AXI4TLStateBundle(sourceBits))
-  def default(x: AXI4TLStateBundle) = {
-    x.size   := 0.U
-    x.source := 0.U
-  }
-}
+case class AXI4TLStateField(sourceBits: Int) extends BundleField[AXI4TLStateBundle](AXI4TLState, Output(new AXI4TLStateBundle(sourceBits)), x => {
+  x.size := 0.U
+  x.source := 0.U
+})
 
 /** TLtoAXI4IdMap serves as a record for the translation performed between id spaces.
   *
@@ -149,7 +145,7 @@ class TLToAXI4(val combinational: Boolean = true, val adapterName: Option[String
       val depth = if (combinational) 1 else 2
       val out_arw = Wire(Decoupled(new AXI4BundleARW(out.params)))
       val out_w = Wire(chiselTypeOf(out.w))
-      out.w :<> Queue.irrevocable(out_w, entries=depth, combinational)
+      out.w :<= Queue.irrevocable(out_w, entries=depth, combinational)
       val queue_arw = Queue.irrevocable(out_arw, entries=depth, combinational)
 
       // Fan out the ARW channel to AR and AW
