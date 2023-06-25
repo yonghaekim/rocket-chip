@@ -67,6 +67,12 @@ class AMOALU(operandBits: Int)(implicit p: Parameters) extends Module {
   val add = io.cmd === M_XA_ADD
   val logic_and = io.cmd === M_XA_OR || io.cmd === M_XA_AND
   val logic_xor = io.cmd === M_XA_XOR || io.cmd === M_XA_OR
+  //yh+begin
+	val logic_estr = io.cmd === M_XA_ESTR
+	val logic_eclr = io.cmd === M_XA_ECLR
+	val logic_eact = io.cmd === M_XA_EACT
+	val logic_edea = io.cmd === M_XA_EDEA
+  //yh+end
 
   val adder_out = {
     // partition the carry chain to support sub-xLen addition
@@ -93,15 +99,47 @@ class AMOALU(operandBits: Int)(implicit p: Parameters) extends Module {
   }
 
   val minmax = Mux(Mux(less, min, max), io.lhs, io.rhs)
+  //yh-val logic =
+  //yh-  Mux(logic_and, io.lhs & io.rhs, 0.U) |
+  //yh-  Mux(logic_xor, io.lhs ^ io.rhs, 0.U)
+	//yh+begin
   val logic =
     Mux(logic_and, io.lhs & io.rhs, 0.U) |
-    Mux(logic_xor, io.lhs ^ io.rhs, 0.U)
+    Mux(logic_xor, io.lhs ^ io.rhs, 0.U) |
+    Mux(logic_estr, Mux(io.lhs === 0.U, io.rhs, io.lhs), 0.U) |
+    Mux(logic_eact | logic_edea, Mux(io.lhs(47,0) === io.rhs(47,0), io.lhs, io.lhs), 0.U) |
+    Mux(logic_eclr, Mux(io.lhs(47,0) === io.rhs(47,0), 0.U, io.lhs), 0.U)
+
+	when (logic_estr) {
+		printf("Found logic_estr lhs: %x rhs: %x logic: %x\n", io.lhs, io.rhs, logic)
+	}
+
+	when (logic_eclr) {
+		printf("Found logic_eclr lhs: %x rhs: %x logic: %x\n", io.lhs, io.rhs, logic)
+	}
+
+	when (logic_eact) {
+		printf("Found logic_eact lhs: %x rhs: %x logic: %x\n", io.lhs, io.rhs, logic)
+	}
+
+	when (logic_edea) {
+		printf("Found logic_edea lhs: %x rhs: %x logic: %x\n", io.lhs, io.rhs, logic)
+	}
+	//yh+end
   val out =
     Mux(add,                    adder_out,
-    Mux(logic_and || logic_xor, logic,
+    //yh-Mux(logic_and || logic_xor, logic,
+    Mux(logic_and || logic_xor || logic_estr || logic_eclr || logic_eact || logic_edea, logic, //yh+
                                 minmax))
 
   val wmask = FillInterleaved(8, io.mask)
   io.out := wmask & out | ~wmask & io.lhs
   io.out_unmasked := out
+
+	//yh+begin
+	when (logic_estr || logic_eclr || logic_eact || logic_edea) {
+		printf("In AMO, out: %x out_unmasked: %x wmask: %x\n",
+					io.out, io.out_unmasked, wmask)
+	}
+	//yh+end
 }

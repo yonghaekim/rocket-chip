@@ -20,6 +20,10 @@ object ALU
   def FN_SR   = 5.U
   def FN_OR   = 6.U
   def FN_AND  = 7.U
+  //yh+begin
+  def FN_TAGC = 8.U
+  def FN_XTAG = 9.U
+  //yh+end
   def FN_SUB  = 10.U
   def FN_SRA  = 11.U
   def FN_SLT  = 12.U
@@ -43,12 +47,37 @@ object ALU
   def cmpUnsigned(cmd: UInt) = cmd(1)
   def cmpInverted(cmd: UInt) = cmd(0)
   def cmpEq(cmd: UInt) = !cmd(3)
+	//yh+begin
+	def genCrc16(hash_in: UInt): UInt =
+	{
+			val crc = Wire(UInt(16.W))
+
+			crc := Cat(hash_in(11) ^ hash_in(10) ^ hash_in(7)  ^ hash_in(3)
+							, hash_in(10) ^ hash_in(9)  ^ hash_in(6)  ^ hash_in(2)
+							, hash_in(9)  ^ hash_in(8)  ^ hash_in(5)  ^ hash_in(1)
+							, hash_in(15) ^ hash_in(8)  ^ hash_in(7)  ^ hash_in(4)  ^ hash_in(0)
+							, hash_in(15) ^ hash_in(14) ^ hash_in(11) ^ hash_in(10) ^ hash_in(6)
+							, hash_in(14) ^ hash_in(13) ^ hash_in(10) ^ hash_in(9)  ^ hash_in(5)
+							, hash_in(15) ^ hash_in(13) ^ hash_in(12) ^ hash_in(9)  ^ hash_in(8)  ^ hash_in(4)
+							, hash_in(15) ^ hash_in(14) ^ hash_in(12) ^ hash_in(11) ^ hash_in(8)  ^ hash_in(7)  ^ hash_in(3)
+							, hash_in(15) ^ hash_in(14) ^ hash_in(13) ^ hash_in(11) ^ hash_in(10) ^ hash_in(7)  ^ hash_in(6)  ^ hash_in(2)
+							, hash_in(14) ^ hash_in(13) ^ hash_in(12) ^ hash_in(10) ^ hash_in(9)  ^ hash_in(6)  ^ hash_in(5)  ^ hash_in(1)
+							, hash_in(13) ^ hash_in(12) ^ hash_in(11) ^ hash_in(9)  ^ hash_in(8)  ^ hash_in(5)  ^ hash_in(4)  ^ hash_in(0)
+							, hash_in(15) ^ hash_in(12) ^ hash_in(8)  ^ hash_in(4)
+							, hash_in(15) ^ hash_in(14) ^ hash_in(11) ^ hash_in(7)  ^ hash_in(3)
+							, hash_in(14) ^ hash_in(13) ^ hash_in(10) ^ hash_in(6)  ^ hash_in(2)
+							, hash_in(13) ^ hash_in(12) ^ hash_in(9)  ^ hash_in(5)  ^ hash_in(1)
+							, hash_in(12) ^ hash_in(11) ^ hash_in(8)  ^ hash_in(4)  ^ hash_in(0))
+      crc
+   }
+	//yh+end
 }
 
 import ALU._
 
 class ALU(implicit p: Parameters) extends CoreModule()(p) {
   val io = IO(new Bundle {
+    val valid = Input(Bool()) //yh+
     val dw = Input(UInt(SZ_DW.W))
     val fn = Input(UInt(SZ_ALU_FN.W))
     val in2 = Input(UInt(xLen.W))
@@ -89,7 +118,36 @@ class ALU(implicit p: Parameters) extends CoreModule()(p) {
   val logic = Mux(io.fn === FN_XOR || io.fn === FN_OR, in1_xor_in2, 0.U) |
               Mux(io.fn === FN_OR || io.fn === FN_AND, io.in1 & io.in2, 0.U)
   val shift_logic = (isCmp(io.fn) && slt) | logic | shout
-  val out = Mux(io.fn === FN_ADD || io.fn === FN_SUB, io.adder_out, shift_logic)
+  //yh-val out = Mux(io.fn === FN_ADD || io.fn === FN_SUB, io.adder_out, shift_logic)
+  //yh+begin
+	val hash_in = (io.in1(47,0) ^ io.in2(63,0))
+	val crc1 = genCrc16(hash_in(15,0))
+	val crc2 = genCrc16(hash_in(31,16) ^ crc1(15,0))
+	val crc3 = genCrc16(hash_in(47,32) ^ crc2(15,0))
+	val crc4 = genCrc16(hash_in(63,48) ^ crc3(15,0))
+	val fin_crc = Mux(crc4 === 0.U, 1.U, crc4(15,0))
+
+  //val temp = (io.in1(15,0) ^ io.in2(15,0))
+  //val tag = Mux(temp === 0.U, 1.U, temp)
+	val zero = Wire(UInt(16.W))
+	zero := 0.U
+
+  //val tag_out = Mux(io.fn === FN_TAGD, Cat(tag(15,0), io.in1(47,0)),
+  val tag_out = Mux(io.fn === FN_TAGC, Cat(fin_crc(15,0), io.in1(47,0)),
+                		Cat(zero(15,0), io.in1(47,0)))
+
+  val out = Mux(io.fn === FN_ADD || io.fn === FN_SUB, io.adder_out,
+                Mux(io.fn === FN_TAGC || io.fn === FN_XTAG, tag_out, shift_logic))
+
+  when (io.valid && io.fn === FN_TAGC)
+  {
+    printf("YH+ Generated tag! io.in1: %x io.in2: %x tag_out: %x\n", io.in1, io.in2, tag_out)
+  }
+    .elsewhen (io.valid && io.fn === FN_XTAG)
+  {
+    printf("YH+ Removed tag! io.in1: %x tag_out: %x\n", io.in1, tag_out)
+  }
+  //yh+end
 
   io.out := out
   if (xLen > 32) {

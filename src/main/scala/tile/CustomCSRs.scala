@@ -28,7 +28,60 @@ class CustomCSRs(implicit p: Parameters) extends CoreBundle {
   protected def chickenCSR: Option[CustomCSR] = None
 
   // If you override this, you'll want to concatenate super.decls
-  def decls: Seq[CustomCSR] = bpmCSR.toSeq ++ chickenCSR
+  //yh-def decls: Seq[CustomCSR] = bpmCSR.toSeq ++ chickenCSR
+
+  //yh+begin
+  protected def cptConfigCSRId = 0x430
+  protected def cptConfigCSR: Option[CustomCSR] = None
+
+  protected def numInstCSRId = 0x431
+  protected def numInstCSR: Option[CustomCSR] = None
+
+  protected def numTagcCSRId = 0x432
+  protected def numTagcCSR: Option[CustomCSR] = None
+
+  protected def numEchkCSRId = 0x433
+  protected def numEchkCSR: Option[CustomCSR] = None
+
+  protected def numEstrCSRId = 0x434
+  protected def numEstrCSR: Option[CustomCSR] = None
+
+  protected def numEclrCSRId = 0x435
+  protected def numEclrCSR: Option[CustomCSR] = None
+
+  protected def numEactCSRId = 0x436
+  protected def numEactCSR: Option[CustomCSR] = None
+
+  protected def numEdeaCSRId = 0x437
+  protected def numEdeaCSR: Option[CustomCSR] = None
+
+  protected def ldstTrafficCSRId = 0x438
+  protected def ldstTrafficCSR: Option[CustomCSR] = None
+
+  protected def edgeTrafficCSRId = 0x439
+  protected def edgeTrafficCSR: Option[CustomCSR] = None
+
+  protected def numEcacheHitCSRId = 0x43a
+  protected def numEcacheHitCSR: Option[CustomCSR] = None
+
+  def cpt_config       	  = getOrElse(cptConfigCSR, _.value, UInt(xLen.W))
+	def num_inst						= getOrElse(numInstCSR, _.value, UInt(xLen.W))
+	def num_tagc						= getOrElse(numTagcCSR, _.value, UInt(xLen.W))
+	def num_echk						= getOrElse(numEchkCSR, _.value, UInt(xLen.W))
+	def num_estr						= getOrElse(numEstrCSR, _.value, UInt(xLen.W))
+	def num_eclr						= getOrElse(numEclrCSR, _.value, UInt(xLen.W))
+	def num_eact						= getOrElse(numEactCSR, _.value, UInt(xLen.W))
+	def num_edea						= getOrElse(numEdeaCSR, _.value, UInt(xLen.W))
+  def ldst_traffic        = getOrElse(ldstTrafficCSR, _.value, UInt(xLen.W))
+  def edge_traffic        = getOrElse(edgeTrafficCSR, _.value, UInt(xLen.W))
+  def num_ecache_hit      = getOrElse(numEcacheHitCSR, _.value, UInt(xLen.W))
+
+  // If you override this, you'll want to concatenate super.decls
+  def decls: Seq[CustomCSR] = bpmCSR.toSeq ++ chickenCSR ++ cptConfigCSR ++ 
+                                numInstCSR ++ numTagcCSR ++ numEchkCSR ++ numEstrCSR ++ numEclrCSR ++
+                                numEactCSR ++ numEdeaCSR ++ 
+                                ldstTrafficCSR ++ edgeTrafficCSR ++ numEcacheHitCSR
+  //yh+end
 
   val csrs = Vec(decls.size, new CustomCSRIO)
 

@@ -296,6 +296,20 @@ class CSRFileIO(implicit p: Parameters) extends CoreBundle
     val set_vstart = Valid(vstart).flip
     val set_vxsat = Bool().asInput
   })
+
+  //yh+begin
+  val cpt_config     		  = UInt(xLen.W).asInput
+  val num_inst            = UInt(xLen.W).asInput
+  val num_tagc            = UInt(xLen.W).asInput
+  val num_echk            = UInt(xLen.W).asInput
+  val num_estr            = UInt(xLen.W).asInput
+  val num_eclr            = UInt(xLen.W).asInput
+  val num_eact            = UInt(xLen.W).asInput
+  val num_edea            = UInt(xLen.W).asInput
+  val ldst_traffic    	  = UInt(xLen.W).asInput
+  val edge_traffic   	    = UInt(xLen.W).asInput
+  val num_ecache_hit  		= UInt(xLen.W).asInput
+  //yh+end
 }
 
 class VConfig(implicit p: Parameters) extends CoreBundle {
@@ -788,6 +802,55 @@ class CSRFile(
     read_mapping += CSRs.vsepc -> read_vsepc
     read_mapping += CSRs.vstvec -> read_vstvec
   }
+
+  //yh+begin
+  val regCptConfig    	  = Reg(UInt(xLen.W))
+  val regNumInst          = Reg(UInt(xLen.W))
+  val regNumTagc          = Reg(UInt(xLen.W))
+  val regNumEchk          = Reg(UInt(xLen.W))
+  val regNumEstr          = Reg(UInt(xLen.W))
+  val regNumEclr          = Reg(UInt(xLen.W))
+  val regNumEact          = Reg(UInt(xLen.W))
+  val regNumEdea          = Reg(UInt(xLen.W))
+  val regLdstTraffic   		= Reg(UInt(xLen.W))
+  val regEdgeTraffic 		  = Reg(UInt(xLen.W))
+  val regNumEcacheHit    	= Reg(UInt(xLen.W))
+ 
+  regCptConfig      		  := io.cpt_config.asUInt
+  regNumInst              := io.num_inst.asUInt 
+  regNumTagc              := io.num_tagc.asUInt 
+  regNumEchk              := io.num_echk.asUInt 
+  regNumEstr              := io.num_estr.asUInt 
+  regNumEclr              := io.num_eclr.asUInt 
+  regNumEact              := io.num_eact.asUInt 
+  regNumEdea              := io.num_edea.asUInt 
+  regLdstTraffic          := io.ldst_traffic.asUInt
+  regEdgeTraffic          := io.edge_traffic.asUInt
+  regNumEcacheHit    	    := io.num_ecache_hit.asUInt
+
+  val cptConfigCSRId = 0x430
+  read_mapping += cptConfigCSRId -> regCptConfig
+  val numInstCSRId = 0x431
+  read_mapping += numInstCSRId -> regNumInst
+  val numTagcCSRId = 0x432
+  read_mapping += numTagcCSRId -> regNumTagc
+  val numEchkCSRId = 0x433
+  read_mapping += numEchkCSRId -> regNumEchk
+  val numEstrCSRId = 0x434
+  read_mapping += numEstrCSRId -> regNumEstr
+  val numEclrCSRId = 0x435
+  read_mapping += numEclrCSRId -> regNumEclr
+  val numEactCSRId = 0x436
+  read_mapping += numEactCSRId -> regNumEact
+  val numEdeaCSRId = 0x437
+  read_mapping += numEdeaCSRId -> regNumEdea
+  val ldstTrafficCSRId = 0x438
+  read_mapping += ldstTrafficCSRId -> regLdstTraffic
+  val edgeTrafficCSRId = 0x439
+  read_mapping += edgeTrafficCSRId -> regEdgeTraffic
+  val numEcacheHitCSRId = 0x43a
+  read_mapping += numEcacheHitCSRId -> regNumEcacheHit
+  //yh+end
 
   // mimpid, marchid, and mvendorid are 0 unless overridden by customCSRs
   Seq(CSRs.mimpid, CSRs.marchid, CSRs.mvendorid).foreach(id => read_mapping.getOrElseUpdate(id, 0.U))
