@@ -4,6 +4,7 @@ package freechips.rocketchip.subsystem
 
 import freechips.rocketchip.config.Parameters
 import freechips.rocketchip.diplomacy.{LazyModule, LazyScope}
+import freechips.rocketchip.diplomaticobjectmodel.HasLogicalTreeNode
 import freechips.rocketchip.prci.ClockGroupEphemeralNode
 import freechips.rocketchip.tilelink.TLBusWrapper
 import freechips.rocketchip.util.{Location, LocationMap}
@@ -21,8 +22,11 @@ trait LazyScopeWithParameters extends LazyScope { this: LazyModule =>
   implicit val p: Parameters
 }
 
+/** Layers of hierarchy with this trait will be represented as objects in the Object Model */
+trait HasLogicalHierarchy extends LazyScopeWithParameters with HasLogicalTreeNode { this: LazyModule => }
+
 /** Layers of hierarchy with this trait contain attachment points for neworks of power, clock, reset, and interrupt resources */
-trait HasPRCILocations extends LazyScopeWithParameters { this: LazyModule =>
+trait HasPRCILocations extends HasLogicalHierarchy { this: LazyModule =>
   implicit val asyncClockGroupsNode: ClockGroupEphemeralNode
   val ibus: InterruptBusWrapper
   val anyLocationMap = LocationMap.empty[Any]

@@ -31,7 +31,7 @@ class AXI4IdIndexer(idBits: Int)(implicit p: Parameters) extends LazyModule
          aligned   = true,
          maxFlight = Some(0))
       }
-      // Accumulate the names of masters we squish
+      // Accumluate the names of masters we squish
       val names = Array.fill(1 << idBits) { new scala.collection.mutable.HashSet[String]() }
       // Squash the information from original masters into new ID masters
       mp.masters.foreach { m =>

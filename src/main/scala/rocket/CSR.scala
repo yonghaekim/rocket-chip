@@ -13,7 +13,6 @@ import freechips.rocketchip.util._
 import freechips.rocketchip.util.property
 import scala.collection.mutable.LinkedHashMap
 import Instructions._
-import CustomInstructions._
 
 class MStatus extends Bundle {
   // not truly part of mstatus, but convenient
@@ -298,17 +297,29 @@ class CSRFileIO(implicit p: Parameters) extends CoreBundle
   })
 
   //yh+begin
-  val cpt_config     		  = UInt(xLen.W).asInput
+  val dpt_config     		  = UInt(xLen.W).asInput
+  //val bounds_margin			  = UInt(xLen.W).asInput
+  val num_tagd            = UInt(xLen.W).asInput
+  val num_xtag            = UInt(xLen.W).asInput
+  val num_tagged_store    = UInt(xLen.W).asInput
+  val num_untagged_store  = UInt(xLen.W).asInput
+  val num_tagged_load     = UInt(xLen.W).asInput
+  val num_untagged_load   = UInt(xLen.W).asInput
   val num_inst            = UInt(xLen.W).asInput
-  val num_tagc            = UInt(xLen.W).asInput
-  val num_echk            = UInt(xLen.W).asInput
-  val num_estr            = UInt(xLen.W).asInput
-  val num_eclr            = UInt(xLen.W).asInput
-  val num_eact            = UInt(xLen.W).asInput
-  val num_edea            = UInt(xLen.W).asInput
   val ldst_traffic    	  = UInt(xLen.W).asInput
-  val edge_traffic   	    = UInt(xLen.W).asInput
-  val num_ecache_hit  		= UInt(xLen.W).asInput
+  val bounds_traffic   	  = UInt(xLen.W).asInput
+  val num_store_hit  		  = UInt(xLen.W).asInput
+  val num_load_hit  		  = UInt(xLen.W).asInput
+  //val num_cstr            = UInt(xLen.W).asInput
+  //val num_cclr            = UInt(xLen.W).asInput
+  //val num_csrch           = UInt(xLen.W).asInput
+	//val num_csrch_hit				= UInt(xLen.W).asInput
+	//val num_cstr_itr				= UInt(xLen.W).asInput
+	//val num_cclr_itr				= UInt(xLen.W).asInput
+	//val num_csrch_itr				= UInt(xLen.W).asInput
+	//val num_chk_fail				= UInt(xLen.W).asInput
+	//val num_cstr_fail				= UInt(xLen.W).asInput
+	//val num_cclr_fail				= UInt(xLen.W).asInput
   //yh+end
 }
 
@@ -463,7 +474,7 @@ class CSRFile(
 
   val reg_debug = Reg(init=Bool(false))
   val reg_dpc = Reg(UInt(width = vaddrBitsExtended))
-  val reg_dscratch0 = Reg(UInt(width = xLen))
+  val reg_dscratch = Reg(UInt(width = xLen))
   val reg_dscratch1 = (p(DebugModuleKey).map(_.nDscratch).getOrElse(1) > 1).option(Reg(UInt(width = xLen)))
   val reg_singleStepped = Reg(Bool())
 
@@ -641,7 +652,7 @@ class CSRFile(
   val debug_csrs = if (!usingDebug) LinkedHashMap() else LinkedHashMap[Int,Bits](
     CSRs.dcsr -> reg_dcsr.asUInt,
     CSRs.dpc -> readEPC(reg_dpc).sextTo(xLen),
-    CSRs.dscratch0 -> reg_dscratch0.asUInt) ++
+    CSRs.dscratch -> reg_dscratch.asUInt) ++
     reg_dscratch1.map(r => CSRs.dscratch1 -> r)
 
   val read_mnstatus = WireInit(0.U.asTypeOf(new MNStatus()))
@@ -649,10 +660,10 @@ class CSRFile(
   read_mnstatus.mpv := reg_mnstatus.mpv
   read_mnstatus.mie := reg_rnmie
   val nmi_csrs = if (!usingNMI) LinkedHashMap() else LinkedHashMap[Int,Bits](
-    CustomCSRs.mnscratch -> reg_mnscratch,
-    CustomCSRs.mnepc -> readEPC(reg_mnepc).sextTo(xLen),
-    CustomCSRs.mncause -> reg_mncause,
-    CustomCSRs.mnstatus -> read_mnstatus.asUInt)
+    CSRs.mnscratch -> reg_mnscratch,
+    CSRs.mnepc -> readEPC(reg_mnepc).sextTo(xLen),
+    CSRs.mncause -> reg_mncause,
+    CSRs.mnstatus -> read_mnstatus.asUInt)
 
   val context_csrs = LinkedHashMap[Int,Bits]() ++
     reg_mcontext.map(r => CSRs.mcontext -> r) ++
@@ -804,52 +815,100 @@ class CSRFile(
   }
 
   //yh+begin
-  val regCptConfig    	  = Reg(UInt(xLen.W))
+  val regDptConfig    	  = Reg(UInt(xLen.W))
+  //val regBoundsMargin			= Reg(UInt(xLen.W))
+  val regNumTagd          = Reg(UInt(xLen.W))
+  val regNumXtag          = Reg(UInt(xLen.W))
+  val regNumTaggedStore   = Reg(UInt(xLen.W))
+  val regNumUntaggedStore = Reg(UInt(xLen.W))
+  val regNumTaggedLoad    = Reg(UInt(xLen.W))
+  val regNumUntaggedLoad  = Reg(UInt(xLen.W))
   val regNumInst          = Reg(UInt(xLen.W))
-  val regNumTagc          = Reg(UInt(xLen.W))
-  val regNumEchk          = Reg(UInt(xLen.W))
-  val regNumEstr          = Reg(UInt(xLen.W))
-  val regNumEclr          = Reg(UInt(xLen.W))
-  val regNumEact          = Reg(UInt(xLen.W))
-  val regNumEdea          = Reg(UInt(xLen.W))
   val regLdstTraffic   		= Reg(UInt(xLen.W))
-  val regEdgeTraffic 		  = Reg(UInt(xLen.W))
-  val regNumEcacheHit    	= Reg(UInt(xLen.W))
+  val regBoundsTraffic 		= Reg(UInt(xLen.W))
+  val regNumStoreHit    	= Reg(UInt(xLen.W))
+  val regNumLoadHit    	  = Reg(UInt(xLen.W))
+  //val regNumCstr          = Reg(UInt(xLen.W))
+  //val regNumCclr          = Reg(UInt(xLen.W))
+  //val regNumCsrch         = Reg(UInt(xLen.W))
+  //val regNumCsrchHit      = Reg(UInt(xLen.W))
+  //val regNumCstrItr       = Reg(UInt(xLen.W))
+  //val regNumCclrItr       = Reg(UInt(xLen.W))
+  //val regNumCsrchItr      = Reg(UInt(xLen.W))
+	//val regNumChkFail				= Reg(UInt(xLen.W))
+	//val regNumCstrFail			= Reg(UInt(xLen.W))
+	//val regNumCclrFail			= Reg(UInt(xLen.W))
  
-  regCptConfig      		  := io.cpt_config.asUInt
+  regDptConfig      		  := io.dpt_config.asUInt
+  //regBoundsMargin			    := io.bounds_margin.asUInt
+  regNumTagd              := io.num_tagd.asUInt 
+  regNumXtag              := io.num_xtag.asUInt 
+  regNumTaggedStore       := io.num_tagged_store.asUInt
+  regNumUntaggedStore     := io.num_untagged_store.asUInt
+  regNumTaggedLoad        := io.num_tagged_load.asUInt
+  regNumUntaggedLoad      := io.num_untagged_load.asUInt
   regNumInst              := io.num_inst.asUInt 
-  regNumTagc              := io.num_tagc.asUInt 
-  regNumEchk              := io.num_echk.asUInt 
-  regNumEstr              := io.num_estr.asUInt 
-  regNumEclr              := io.num_eclr.asUInt 
-  regNumEact              := io.num_eact.asUInt 
-  regNumEdea              := io.num_edea.asUInt 
   regLdstTraffic          := io.ldst_traffic.asUInt
-  regEdgeTraffic          := io.edge_traffic.asUInt
-  regNumEcacheHit    	    := io.num_ecache_hit.asUInt
+  regBoundsTraffic        := io.bounds_traffic.asUInt
+  regNumStoreHit    	    := io.num_store_hit.asUInt
+  regNumLoadHit    		    := io.num_load_hit.asUInt
+  //regNumCstr              := io.num_cstr.asUInt 
+  //regNumCclr              := io.num_cclr.asUInt 
+  //regNumCsrch             := io.num_csrch.asUInt 
+	//regNumCsrchHit          := io.num_csrch_hit.asUInt
+	//regNumCstrItr						:= io.num_cstr_itr.asUInt
+	//regNumCclrItr						:= io.num_cclr_itr.asUInt
+	//regNumCsrchItr					:= io.num_csrch_itr.asUInt
+	//regNumChkFail						:= io.num_chk_fail.asUInt
+	//regNumCstrFail					:= io.num_cstr_fail.asUInt
+	//regNumCclrFail					:= io.num_cclr_fail.asUInt
 
-  val cptConfigCSRId = 0x430
-  read_mapping += cptConfigCSRId -> regCptConfig
-  val numInstCSRId = 0x431
+  val dptConfigCSRId = 0x430
+  read_mapping += dptConfigCSRId -> regDptConfig
+  //val boundsMarginCSRId = 0x431
+  //read_mapping += boundsMarginCSRId -> regBoundsMargin
+  val numTagdCSRId = 0x432
+  read_mapping += numTagdCSRId -> regNumTagd
+  val numXtagCSRId = 0x433
+  read_mapping += numXtagCSRId -> regNumXtag
+  val numTaggedStoreCSRId = 0x434
+  read_mapping += numTaggedStoreCSRId -> regNumTaggedStore
+  val numUntaggedStoreCSRId = 0x435
+  read_mapping += numUntaggedStoreCSRId -> regNumUntaggedStore
+  val numTaggedLoadCSRId = 0x436
+  read_mapping += numTaggedLoadCSRId -> regNumTaggedLoad
+  val numUntaggedLoadCSRId = 0x437
+  read_mapping += numUntaggedLoadCSRId -> regNumUntaggedLoad
+  val numInstCSRId = 0x438
   read_mapping += numInstCSRId -> regNumInst
-  val numTagcCSRId = 0x432
-  read_mapping += numTagcCSRId -> regNumTagc
-  val numEchkCSRId = 0x433
-  read_mapping += numEchkCSRId -> regNumEchk
-  val numEstrCSRId = 0x434
-  read_mapping += numEstrCSRId -> regNumEstr
-  val numEclrCSRId = 0x435
-  read_mapping += numEclrCSRId -> regNumEclr
-  val numEactCSRId = 0x436
-  read_mapping += numEactCSRId -> regNumEact
-  val numEdeaCSRId = 0x437
-  read_mapping += numEdeaCSRId -> regNumEdea
-  val ldstTrafficCSRId = 0x438
+  val ldstTrafficCSRId = 0x439
   read_mapping += ldstTrafficCSRId -> regLdstTraffic
-  val edgeTrafficCSRId = 0x439
-  read_mapping += edgeTrafficCSRId -> regEdgeTraffic
-  val numEcacheHitCSRId = 0x43a
-  read_mapping += numEcacheHitCSRId -> regNumEcacheHit
+  val boundsTrafficCSRId = 0x43a
+  read_mapping += boundsTrafficCSRId -> regBoundsTraffic
+  val numStoreHitCSRId = 0x43b
+  read_mapping += numStoreHitCSRId -> regNumStoreHit
+  val numLoadHitCSRId = 0x43c
+  read_mapping += numLoadHitCSRId -> regNumLoadHit
+  //val numCstrCSRId = 0x43d
+  //read_mapping += numCstrCSRId -> regNumCstr
+  //val numCclrCSRId = 0x43e
+  //read_mapping += numCclrCSRId -> regNumCclr
+  //val numCsrchCSRId = 0x43f
+  //read_mapping += numCsrchCSRId -> regNumCsrch
+  //val numCsrchHitCSRId = 0x440
+  //read_mapping += numCsrchHitCSRId -> regNumCsrchHit
+  //val numCstrItrCSRId = 0x441
+  //read_mapping += numCstrItrCSRId -> regNumCstrItr
+  //val numCclrItrCSRId = 0x442
+  //read_mapping += numCclrItrCSRId -> regNumCclrItr
+  //val numCsrchItrCSRId = 0x443
+  //read_mapping += numCsrchItrCSRId -> regNumCsrchItr
+  //val numChkFailCSRId = 0x444
+  //read_mapping += numChkFailCSRId -> regNumChkFail
+  //val numCstrFailCSRId = 0x445
+  //read_mapping += numCstrFailCSRId -> regNumCstrFail
+  //val numCclrFailCSRId = 0x446
+  //read_mapping += numCclrFailCSRId -> regNumCclrFail
   //yh+end
 
   // mimpid, marchid, and mvendorid are 0 unless overridden by customCSRs
@@ -876,8 +935,8 @@ class CSRFile(
 
   val system_insn = io.rw.cmd === CSR.I
   val hlsv = Seq(HLV_B, HLV_BU, HLV_H, HLV_HU, HLV_W, HLV_WU, HLV_D, HSV_B, HSV_H, HSV_W, HSV_D, HLVX_HU, HLVX_WU)
-  val decode_table = Seq(        ECALL->       List(Y,N,N,N,N,N,N,N,N),
-                                 EBREAK->      List(N,Y,N,N,N,N,N,N,N),
+  val decode_table = Seq(        SCALL->       List(Y,N,N,N,N,N,N,N,N),
+                                 SBREAK->      List(N,Y,N,N,N,N,N,N,N),
                                  MRET->        List(N,N,Y,N,N,N,N,N,N),
                                  CEASE->       List(N,N,N,Y,N,N,N,N,N),
                                  WFI->         List(N,N,N,N,Y,N,N,N,N)) ++
@@ -889,10 +948,8 @@ class CSRFile(
     usingHypervisor.option(      HFENCE_VVMA-> List(N,N,N,N,N,N,Y,N,N)) ++
     usingHypervisor.option(      HFENCE_GVMA-> List(N,N,N,N,N,N,N,Y,N)) ++
     (if (usingHypervisor)        hlsv.map(_->  List(N,N,N,N,N,N,N,N,Y)) else Seq())
-  val insn_call :: insn_break :: insn_ret :: insn_cease :: insn_wfi :: _ :: _ :: _ :: _ :: Nil = {
-    val insn = ECALL.value.U | (io.rw.addr << 20)
-    DecodeLogic(insn, decode_table(0)._2.map(x=>X), decode_table).map(system_insn && _.asBool)
-  }
+  val insn_call :: insn_break :: insn_ret :: insn_cease :: insn_wfi :: _ :: _ :: _ :: _ :: Nil =
+    DecodeLogic(io.rw.addr << 20, decode_table(0)._2.map(x=>X), decode_table).map(system_insn && _.asBool)
 
   for (io_dec <- io.decode) {
     val addr = io_dec.inst(31, 20)
@@ -916,7 +973,7 @@ class CSRFile(
     io_dec.fp_illegal := io.status.fs === 0 || reg_mstatus.v && reg_vsstatus.fs === 0 || !reg_misa('f'-'a')
     io_dec.vector_illegal := io.status.vs === 0 || reg_mstatus.v && reg_vsstatus.vs === 0 || !reg_misa('v'-'a')
     io_dec.fp_csr := decodeFast(fp_csrs.keys.toList)
-    io_dec.rocc_illegal := io.status.xs === 0 || reg_mstatus.v && reg_vsstatus.xs === 0 || !reg_misa('x'-'a')
+    io_dec.rocc_illegal := io.status.xs === 0 || reg_mstatus.v && reg_vsstatus.vs === 0 || !reg_misa('x'-'a')
     val csr_addr_legal = reg_mstatus.prv >= CSR.mode(addr) ||
       usingHypervisor && !reg_mstatus.v && reg_mstatus.prv === PRV.S && CSR.mode(addr) === PRV.H
     val csr_exists = decodeAny(read_mapping)
@@ -1278,10 +1335,10 @@ class CSRFile(
 
     if (usingNMI) {
       val new_mnstatus = new MNStatus().fromBits(wdata)
-      when (decoded_addr(CustomCSRs.mnscratch)) { reg_mnscratch := wdata }
-      when (decoded_addr(CustomCSRs.mnepc))     { reg_mnepc := formEPC(wdata) }
-      when (decoded_addr(CustomCSRs.mncause))   { reg_mncause := wdata & UInt((BigInt(1) << (xLen-1)) + BigInt(3)) }
-      when (decoded_addr(CustomCSRs.mnstatus))  {
+      when (decoded_addr(CSRs.mnscratch)) { reg_mnscratch := wdata }
+      when (decoded_addr(CSRs.mnepc))     { reg_mnepc := formEPC(wdata) }
+      when (decoded_addr(CSRs.mncause))   { reg_mncause := wdata & UInt((BigInt(1) << (xLen-1)) + BigInt(3)) }
+      when (decoded_addr(CSRs.mnstatus))  {
         reg_mnstatus.mpp := legalizePrivilege(new_mnstatus.mpp)
         reg_mnstatus.mpv := usingHypervisor && new_mnstatus.mpv
         reg_rnmie := reg_rnmie | new_mnstatus.mie  // mnie bit settable but not clearable from software
@@ -1318,7 +1375,7 @@ class CSRFile(
         if (usingHypervisor) reg_dcsr.v := new_dcsr.v
       }
       when (decoded_addr(CSRs.dpc))      { reg_dpc := formEPC(wdata) }
-      when (decoded_addr(CSRs.dscratch0)) { reg_dscratch0 := wdata }
+      when (decoded_addr(CSRs.dscratch)) { reg_dscratch := wdata }
       reg_dscratch1.foreach { r =>
         when (decoded_addr(CSRs.dscratch1)) { r := wdata }
       }
@@ -1408,6 +1465,7 @@ class CSRFile(
         reg_vsstatus.sum := new_vsstatus.sum
         reg_vsstatus.fs := formFS(new_vsstatus.fs)
         reg_vsstatus.vs := formVS(new_vsstatus.vs)
+        if (usingRoCC) reg_vsstatus.xs := Fill(2, new_vsstatus.xs.orR)
       }
       when (decoded_addr(CSRs.vsip)) {
         val new_vsip = new MIP().fromBits((read_hip & ~read_hideleg) | ((wdata << 1) & read_hideleg))
@@ -1420,7 +1478,7 @@ class CSRFile(
           reg_vsatp.mode := new_vsatp.mode & satp_valid_modes.reduce(_|_)
         }
         when (mode_ok || !reg_mstatus.v) {
-          reg_vsatp.ppn := new_vsatp.ppn(vpnBits.min(new_vsatp.ppn.getWidth)-1,0)
+          reg_vsatp.ppn := new_vsatp.ppn(vpnBits-1,0)
         }
         if (asIdBits > 0) reg_vsatp.asid := new_vsatp.asid(asIdBits-1,0)
       }
@@ -1548,7 +1606,6 @@ class CSRFile(
   if (!(vmIdBits > 0)) {
     reg_hgatp.asid := 0.U
   }
-  reg_vsstatus.xs := (if (usingRoCC) UInt(3) else UInt(0))
 
   if (nBreakpoints <= 1) reg_tselect := 0
   for (bpc <- reg_bp map {_.control}) {

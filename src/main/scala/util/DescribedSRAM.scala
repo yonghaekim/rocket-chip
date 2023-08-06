@@ -5,6 +5,8 @@ package freechips.rocketchip.util
 
 import chisel3.{Data, SyncReadMem, Vec}
 import chisel3.util.log2Ceil
+import freechips.rocketchip.diplomaticobjectmodel.DiplomaticObjectModelAddressing
+import freechips.rocketchip.diplomaticobjectmodel.model.{OMSRAM, OMRTLModule}
 
 object DescribedSRAM {
   def apply[T <: Data](
@@ -12,7 +14,7 @@ object DescribedSRAM {
     desc: String,
     size: BigInt, // depth
     data: T
-  ): SyncReadMem[T] = {
+  ): (SyncReadMem[T], OMSRAM) = {
 
     val mem = SyncReadMem(size, data)
 
@@ -25,6 +27,15 @@ object DescribedSRAM {
 
     val uid = 0
 
+    val omSRAM = DiplomaticObjectModelAddressing.makeOMSRAM(
+      desc = desc,
+      width = data.getWidth,
+      depth = size,
+      granWidth = granWidth,
+      uid = uid,
+      rtlModule = OMRTLModule(moduleName=name)
+    )
+
     Annotated.srams(
       component = mem,
       name = name,
@@ -35,6 +46,6 @@ object DescribedSRAM {
       write_mask_granularity = granWidth
     )
 
-    mem
+    (mem, omSRAM)
   }
 }

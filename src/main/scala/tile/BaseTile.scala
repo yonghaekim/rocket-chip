@@ -7,6 +7,8 @@ import Chisel._
 import freechips.rocketchip.config._
 import freechips.rocketchip.subsystem._
 import freechips.rocketchip.diplomacy._
+import freechips.rocketchip.diplomaticobjectmodel.{HasLogicalTreeNode}
+import freechips.rocketchip.diplomaticobjectmodel.logicaltree.{GenericLogicalTreeNode, LogicalTreeNode}
 
 import freechips.rocketchip.interrupts._
 import freechips.rocketchip.rocket._
@@ -184,6 +186,7 @@ abstract class BaseTile private (val crossing: ClockCrossingType, q: Parameters)
     extends LazyModule()(q)
     with CrossesToOnlyOneClockDomain
     with HasNonDiplomaticTileParameters
+    with HasLogicalTreeNode
 {
   // Public constructor alters Parameters to supply some legacy compatibility keys
   def this(tileParams: TileParams, crossing: ClockCrossingType, lookup: LookupByHartIdImpl, p: Parameters) = {
@@ -351,6 +354,9 @@ abstract class BaseTile private (val crossing: ClockCrossingType, q: Parameters)
     * in subclasses of this class.
     */
  def makeSlaveBoundaryBuffers(crossing: ClockCrossingType)(implicit p: Parameters) = TLBuffer(BufferParams.none)
+
+  /** Use for ObjectModel representation of this tile. Subclasses might override this. */
+  val logicalTreeNode: LogicalTreeNode = new GenericLogicalTreeNode
 
   /** Can be used to access derived params calculated by HasCoreParameters
     *
