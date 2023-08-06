@@ -295,6 +295,32 @@ class CSRFileIO(implicit p: Parameters) extends CoreBundle
     val set_vstart = Valid(vstart).flip
     val set_vxsat = Bool().asInput
   })
+
+  //yh+begin
+  val dpt_config     		  = UInt(xLen.W).asInput
+  //val bounds_margin			  = UInt(xLen.W).asInput
+  val num_tagd            = UInt(xLen.W).asInput
+  val num_xtag            = UInt(xLen.W).asInput
+  val num_tagged_store    = UInt(xLen.W).asInput
+  val num_untagged_store  = UInt(xLen.W).asInput
+  val num_tagged_load     = UInt(xLen.W).asInput
+  val num_untagged_load   = UInt(xLen.W).asInput
+  val num_inst            = UInt(xLen.W).asInput
+  val ldst_traffic    	  = UInt(xLen.W).asInput
+  val bounds_traffic   	  = UInt(xLen.W).asInput
+  val num_store_hit  		  = UInt(xLen.W).asInput
+  val num_load_hit  		  = UInt(xLen.W).asInput
+  //val num_cstr            = UInt(xLen.W).asInput
+  //val num_cclr            = UInt(xLen.W).asInput
+  //val num_csrch           = UInt(xLen.W).asInput
+	//val num_csrch_hit				= UInt(xLen.W).asInput
+	//val num_cstr_itr				= UInt(xLen.W).asInput
+	//val num_cclr_itr				= UInt(xLen.W).asInput
+	//val num_csrch_itr				= UInt(xLen.W).asInput
+	//val num_chk_fail				= UInt(xLen.W).asInput
+	//val num_cstr_fail				= UInt(xLen.W).asInput
+	//val num_cclr_fail				= UInt(xLen.W).asInput
+  //yh+end
 }
 
 class VConfig(implicit p: Parameters) extends CoreBundle {
@@ -787,6 +813,103 @@ class CSRFile(
     read_mapping += CSRs.vsepc -> read_vsepc
     read_mapping += CSRs.vstvec -> read_vstvec
   }
+
+  //yh+begin
+  val regDptConfig    	  = Reg(UInt(xLen.W))
+  //val regBoundsMargin			= Reg(UInt(xLen.W))
+  val regNumTagd          = Reg(UInt(xLen.W))
+  val regNumXtag          = Reg(UInt(xLen.W))
+  val regNumTaggedStore   = Reg(UInt(xLen.W))
+  val regNumUntaggedStore = Reg(UInt(xLen.W))
+  val regNumTaggedLoad    = Reg(UInt(xLen.W))
+  val regNumUntaggedLoad  = Reg(UInt(xLen.W))
+  val regNumInst          = Reg(UInt(xLen.W))
+  val regLdstTraffic   		= Reg(UInt(xLen.W))
+  val regBoundsTraffic 		= Reg(UInt(xLen.W))
+  val regNumStoreHit    	= Reg(UInt(xLen.W))
+  val regNumLoadHit    	  = Reg(UInt(xLen.W))
+  //val regNumCstr          = Reg(UInt(xLen.W))
+  //val regNumCclr          = Reg(UInt(xLen.W))
+  //val regNumCsrch         = Reg(UInt(xLen.W))
+  //val regNumCsrchHit      = Reg(UInt(xLen.W))
+  //val regNumCstrItr       = Reg(UInt(xLen.W))
+  //val regNumCclrItr       = Reg(UInt(xLen.W))
+  //val regNumCsrchItr      = Reg(UInt(xLen.W))
+	//val regNumChkFail				= Reg(UInt(xLen.W))
+	//val regNumCstrFail			= Reg(UInt(xLen.W))
+	//val regNumCclrFail			= Reg(UInt(xLen.W))
+ 
+  regDptConfig      		  := io.dpt_config.asUInt
+  //regBoundsMargin			    := io.bounds_margin.asUInt
+  regNumTagd              := io.num_tagd.asUInt 
+  regNumXtag              := io.num_xtag.asUInt 
+  regNumTaggedStore       := io.num_tagged_store.asUInt
+  regNumUntaggedStore     := io.num_untagged_store.asUInt
+  regNumTaggedLoad        := io.num_tagged_load.asUInt
+  regNumUntaggedLoad      := io.num_untagged_load.asUInt
+  regNumInst              := io.num_inst.asUInt 
+  regLdstTraffic          := io.ldst_traffic.asUInt
+  regBoundsTraffic        := io.bounds_traffic.asUInt
+  regNumStoreHit    	    := io.num_store_hit.asUInt
+  regNumLoadHit    		    := io.num_load_hit.asUInt
+  //regNumCstr              := io.num_cstr.asUInt 
+  //regNumCclr              := io.num_cclr.asUInt 
+  //regNumCsrch             := io.num_csrch.asUInt 
+	//regNumCsrchHit          := io.num_csrch_hit.asUInt
+	//regNumCstrItr						:= io.num_cstr_itr.asUInt
+	//regNumCclrItr						:= io.num_cclr_itr.asUInt
+	//regNumCsrchItr					:= io.num_csrch_itr.asUInt
+	//regNumChkFail						:= io.num_chk_fail.asUInt
+	//regNumCstrFail					:= io.num_cstr_fail.asUInt
+	//regNumCclrFail					:= io.num_cclr_fail.asUInt
+
+  val dptConfigCSRId = 0x430
+  read_mapping += dptConfigCSRId -> regDptConfig
+  //val boundsMarginCSRId = 0x431
+  //read_mapping += boundsMarginCSRId -> regBoundsMargin
+  val numTagdCSRId = 0x432
+  read_mapping += numTagdCSRId -> regNumTagd
+  val numXtagCSRId = 0x433
+  read_mapping += numXtagCSRId -> regNumXtag
+  val numTaggedStoreCSRId = 0x434
+  read_mapping += numTaggedStoreCSRId -> regNumTaggedStore
+  val numUntaggedStoreCSRId = 0x435
+  read_mapping += numUntaggedStoreCSRId -> regNumUntaggedStore
+  val numTaggedLoadCSRId = 0x436
+  read_mapping += numTaggedLoadCSRId -> regNumTaggedLoad
+  val numUntaggedLoadCSRId = 0x437
+  read_mapping += numUntaggedLoadCSRId -> regNumUntaggedLoad
+  val numInstCSRId = 0x438
+  read_mapping += numInstCSRId -> regNumInst
+  val ldstTrafficCSRId = 0x439
+  read_mapping += ldstTrafficCSRId -> regLdstTraffic
+  val boundsTrafficCSRId = 0x43a
+  read_mapping += boundsTrafficCSRId -> regBoundsTraffic
+  val numStoreHitCSRId = 0x43b
+  read_mapping += numStoreHitCSRId -> regNumStoreHit
+  val numLoadHitCSRId = 0x43c
+  read_mapping += numLoadHitCSRId -> regNumLoadHit
+  //val numCstrCSRId = 0x43d
+  //read_mapping += numCstrCSRId -> regNumCstr
+  //val numCclrCSRId = 0x43e
+  //read_mapping += numCclrCSRId -> regNumCclr
+  //val numCsrchCSRId = 0x43f
+  //read_mapping += numCsrchCSRId -> regNumCsrch
+  //val numCsrchHitCSRId = 0x440
+  //read_mapping += numCsrchHitCSRId -> regNumCsrchHit
+  //val numCstrItrCSRId = 0x441
+  //read_mapping += numCstrItrCSRId -> regNumCstrItr
+  //val numCclrItrCSRId = 0x442
+  //read_mapping += numCclrItrCSRId -> regNumCclrItr
+  //val numCsrchItrCSRId = 0x443
+  //read_mapping += numCsrchItrCSRId -> regNumCsrchItr
+  //val numChkFailCSRId = 0x444
+  //read_mapping += numChkFailCSRId -> regNumChkFail
+  //val numCstrFailCSRId = 0x445
+  //read_mapping += numCstrFailCSRId -> regNumCstrFail
+  //val numCclrFailCSRId = 0x446
+  //read_mapping += numCclrFailCSRId -> regNumCclrFail
+  //yh+end
 
   // mimpid, marchid, and mvendorid are 0 unless overridden by customCSRs
   Seq(CSRs.mimpid, CSRs.marchid, CSRs.mvendorid).foreach(id => read_mapping.getOrElseUpdate(id, 0.U))

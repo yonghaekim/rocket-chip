@@ -19,6 +19,10 @@ object ALU
   def FN_SR   = UInt(5)
   def FN_OR   = UInt(6)
   def FN_AND  = UInt(7)
+  //yh+begin
+  def FN_TAGD = UInt(8)
+  def FN_XTAG = UInt(9)
+  //yh+end
   def FN_SUB  = UInt(10)
   def FN_SRA  = UInt(11)
   def FN_SLT  = UInt(12)
@@ -42,12 +46,38 @@ object ALU
   def cmpUnsigned(cmd: UInt) = cmd(1)
   def cmpInverted(cmd: UInt) = cmd(0)
   def cmpEq(cmd: UInt) = !cmd(3)
+	//yh+begin
+	def genCrc16(hash_in: UInt): UInt =
+	{
+			val crc = Wire(UInt(16.W))
+
+			crc := Cat(hash_in(11) ^ hash_in(10) ^ hash_in(7)  ^ hash_in(3)
+							, hash_in(10) ^ hash_in(9)  ^ hash_in(6)  ^ hash_in(2)
+							, hash_in(9)  ^ hash_in(8)  ^ hash_in(5)  ^ hash_in(1)
+							, hash_in(15) ^ hash_in(8)  ^ hash_in(7)  ^ hash_in(4)  ^ hash_in(0)
+							, hash_in(15) ^ hash_in(14) ^ hash_in(11) ^ hash_in(10) ^ hash_in(6)
+							, hash_in(14) ^ hash_in(13) ^ hash_in(10) ^ hash_in(9)  ^ hash_in(5)
+							, hash_in(15) ^ hash_in(13) ^ hash_in(12) ^ hash_in(9)  ^ hash_in(8)  ^ hash_in(4)
+							, hash_in(15) ^ hash_in(14) ^ hash_in(12) ^ hash_in(11) ^ hash_in(8)  ^ hash_in(7)  ^ hash_in(3)
+							, hash_in(15) ^ hash_in(14) ^ hash_in(13) ^ hash_in(11) ^ hash_in(10) ^ hash_in(7)  ^ hash_in(6)  ^ hash_in(2)
+							, hash_in(14) ^ hash_in(13) ^ hash_in(12) ^ hash_in(10) ^ hash_in(9)  ^ hash_in(6)  ^ hash_in(5)  ^ hash_in(1)
+							, hash_in(13) ^ hash_in(12) ^ hash_in(11) ^ hash_in(9)  ^ hash_in(8)  ^ hash_in(5)  ^ hash_in(4)  ^ hash_in(0)
+							, hash_in(15) ^ hash_in(12) ^ hash_in(8)  ^ hash_in(4)
+							, hash_in(15) ^ hash_in(14) ^ hash_in(11) ^ hash_in(7)  ^ hash_in(3)
+							, hash_in(14) ^ hash_in(13) ^ hash_in(10) ^ hash_in(6)  ^ hash_in(2)
+							, hash_in(13) ^ hash_in(12) ^ hash_in(9)  ^ hash_in(5)  ^ hash_in(1)
+							, hash_in(12) ^ hash_in(11) ^ hash_in(8)  ^ hash_in(4)  ^ hash_in(0))
+      crc
+   }
+	//yh+end
 }
 
 import ALU._
 
 class ALU(implicit p: Parameters) extends CoreModule()(p) {
   val io = new Bundle {
+    val valid = Bool(INPUT) //yh+
+		val is_sp = Bool(INPUT) //yh+
     val dw = Bits(INPUT, SZ_DW)
     val fn = Bits(INPUT, SZ_ALU_FN)
     val in2 = UInt(INPUT, xLen)
@@ -88,7 +118,52 @@ class ALU(implicit p: Parameters) extends CoreModule()(p) {
   val logic = Mux(io.fn === FN_XOR || io.fn === FN_OR, in1_xor_in2, UInt(0)) |
               Mux(io.fn === FN_OR || io.fn === FN_AND, io.in1 & io.in2, UInt(0))
   val shift_logic = (isCmp(io.fn) && slt) | logic | shout
-  val out = Mux(io.fn === FN_ADD || io.fn === FN_SUB, io.adder_out, shift_logic)
+  //yh-val out = Mux(io.fn === FN_ADD || io.fn === FN_SUB, io.adder_out, shift_logic)
+  //yh+begin
+	//val lfsr = RegInit(0x10.U(64.W))
+  //val feedback = Wire(UInt(1.W))
+  //feedback := (lfsr(0) ^ lfsr(1) ^ lfsr(3) ^ lfsr(4) ^ lfsr(20) ^ lfsr(26) ^
+	//							lfsr(31) ^ lfsr(32) ^ lfsr(33) ^ lfsr(40) ^ lfsr(48) ^
+	//							lfsr(54) ^ lfsr(56) ^ lfsr(59) ^ lfsr(60) ^ lfsr(63))
+	val lfsr = RegInit(0x10.U(16.W))
+  val feedback = Wire(UInt(1.W))
+  feedback := (lfsr(5) ^ lfsr(3) ^ lfsr(2) ^ lfsr(0))
+  lfsr := Mux(io.valid && io.fn === FN_TAGD, Cat(feedback, lfsr(15, 1)), lfsr)
+  //lfsr := Cat(feedback, lfsr(15, 1))
+	//when (io.valid && io.fn === FN_TAGD) {
+	//	printf("lfsr: (0x%x -> 0x%x)\n", lfsr(15,0), Cat(feedback, lfsr(15, 1)))
+	//}
+
+	val crc0 = Mux(io.is_sp, lfsr(15,0), 0.U)
+	val hash_in = (io.in1(47,0) ^ io.in2(63,0))
+	val crc1 = genCrc16(hash_in(15,0) ^ crc0(15,0))
+	val crc2 = genCrc16(hash_in(31,16) ^ crc1(15,0))
+	val crc3 = genCrc16(hash_in(47,32) ^ crc2(15,0))
+	val crc4 = genCrc16(hash_in(63,48) ^ crc3(15,0))
+	val fin_crc = Mux(crc4 === 0.U, lfsr(15,0), crc4(15,0))
+
+  //val temp = (io.in1(15,0) ^ io.in2(15,0))
+  //val tag = Mux(temp === 0.U, 1.U, temp)
+	val zero = Wire(UInt(16.W))
+	zero := 0.U
+
+  //val tag_out = Mux(io.fn === FN_TAGD, Cat(tag(15,0), io.in1(47,0)),
+  val tag_out = Mux(io.fn === FN_TAGD, Cat(fin_crc(15,0), io.in1(47,0)),
+                		Cat(zero(15,0), io.in1(47,0)))
+
+  val out = Mux(io.fn === FN_ADD || io.fn === FN_SUB, io.adder_out,
+                Mux(io.fn === FN_TAGD || io.fn === FN_XTAG, tag_out, shift_logic))
+
+  when (io.valid && io.fn === FN_TAGD)
+  {
+    printf("YH+ Generated tag! io.in1: %x io.in2: %x io.is_sp: %d crc0: %x lfsr: %x tag_out: %x\n",
+						io.in1, io.in2, io.is_sp, crc0, lfsr(15,0), tag_out)
+  }
+    .elsewhen (io.valid && io.fn === FN_XTAG)
+  {
+    printf("YH+ Removed tag! io.in1: %x tag_out: %x\n", io.in1, tag_out)
+  }
+  //yh+end
 
   io.out := out
   if (xLen > 32) {
