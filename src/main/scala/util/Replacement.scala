@@ -323,7 +323,7 @@ class SetAssocLRU(n_sets: Int, n_ways: Int, policy: String) extends SetAssocRepl
 
 }
 
-// Synthesizable unit tests
+/** Synthesizeable unit tests */
 import freechips.rocketchip.unittest._
 
 class PLRUTest(n_ways: Int, timeout: Int = 500) extends UnitTest(timeout) {

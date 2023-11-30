@@ -13,7 +13,6 @@ import freechips.rocketchip.util._
 import freechips.rocketchip.util.property
 import scala.collection.mutable.LinkedHashMap
 import Instructions._
-import CustomInstructions._
 
 class MStatus extends Bundle {
   // not truly part of mstatus, but convenient
@@ -296,6 +295,40 @@ class CSRFileIO(implicit p: Parameters) extends CoreBundle
     val set_vstart = Valid(vstart).flip
     val set_vxsat = Bool().asInput
   })
+
+  //yh+begin
+  val dpt_config     		  = UInt(xLen.W).asInput
+  val wpb_base     		    = UInt(xLen.W).asInput
+  val num_tagd            = UInt(xLen.W).asInput
+  val num_xtag            = UInt(xLen.W).asInput
+  val num_store           = UInt(xLen.W).asInput
+  val num_load            = UInt(xLen.W).asInput
+  val num_tagged_store    = UInt(xLen.W).asInput
+  val num_tagged_load     = UInt(xLen.W).asInput
+  val num_inst            = UInt(xLen.W).asInput
+  val ldst_traffic    	  = UInt(xLen.W).asInput
+  val bounds_traffic   	  = UInt(xLen.W).asInput
+  val num_store_hit  		  = UInt(xLen.W).asInput
+  val num_load_hit  		  = UInt(xLen.W).asInput
+  val num_cstr            = UInt(xLen.W).asInput
+  val num_cclr            = UInt(xLen.W).asInput
+  val bounds_margin       = UInt(xLen.W).asInput
+  val arena_end_0       	= UInt(xLen.W).asInput
+  val arena_end_1       	= UInt(xLen.W).asInput
+  val arena_end_2       	= UInt(xLen.W).asInput
+  val arena_end_3       	= UInt(xLen.W).asInput
+  val arena_end_4       	= UInt(xLen.W).asInput
+  val arena_end_5       	= UInt(xLen.W).asInput
+  val arena_end_6       	= UInt(xLen.W).asInput
+  val arena_end_7       	= UInt(xLen.W).asInput
+  val num_ways_0       		= UInt(xLen.W).asInput
+  val num_ways_1       		= UInt(xLen.W).asInput
+  val num_ways_2       		= UInt(xLen.W).asInput
+  val num_ways_3       		= UInt(xLen.W).asInput
+  val num_slq_itr         = UInt(xLen.W).asInput
+  val num_ssq_itr         = UInt(xLen.W).asInput
+  val num_scq_itr         = UInt(xLen.W).asInput
+  //yh+end
 }
 
 class VConfig(implicit p: Parameters) extends CoreBundle {
@@ -449,7 +482,7 @@ class CSRFile(
 
   val reg_debug = Reg(init=Bool(false))
   val reg_dpc = Reg(UInt(width = vaddrBitsExtended))
-  val reg_dscratch0 = Reg(UInt(width = xLen))
+  val reg_dscratch = Reg(UInt(width = xLen))
   val reg_dscratch1 = (p(DebugModuleKey).map(_.nDscratch).getOrElse(1) > 1).option(Reg(UInt(width = xLen)))
   val reg_singleStepped = Reg(Bool())
 
@@ -627,7 +660,7 @@ class CSRFile(
   val debug_csrs = if (!usingDebug) LinkedHashMap() else LinkedHashMap[Int,Bits](
     CSRs.dcsr -> reg_dcsr.asUInt,
     CSRs.dpc -> readEPC(reg_dpc).sextTo(xLen),
-    CSRs.dscratch0 -> reg_dscratch0.asUInt) ++
+    CSRs.dscratch -> reg_dscratch.asUInt) ++
     reg_dscratch1.map(r => CSRs.dscratch1 -> r)
 
   val read_mnstatus = WireInit(0.U.asTypeOf(new MNStatus()))
@@ -635,10 +668,10 @@ class CSRFile(
   read_mnstatus.mpv := reg_mnstatus.mpv
   read_mnstatus.mie := reg_rnmie
   val nmi_csrs = if (!usingNMI) LinkedHashMap() else LinkedHashMap[Int,Bits](
-    CustomCSRs.mnscratch -> reg_mnscratch,
-    CustomCSRs.mnepc -> readEPC(reg_mnepc).sextTo(xLen),
-    CustomCSRs.mncause -> reg_mncause,
-    CustomCSRs.mnstatus -> read_mnstatus.asUInt)
+    CSRs.mnscratch -> reg_mnscratch,
+    CSRs.mnepc -> readEPC(reg_mnepc).sextTo(xLen),
+    CSRs.mncause -> reg_mncause,
+    CSRs.mnstatus -> read_mnstatus.asUInt)
 
   val context_csrs = LinkedHashMap[Int,Bits]() ++
     reg_mcontext.map(r => CSRs.mcontext -> r) ++
@@ -789,6 +822,135 @@ class CSRFile(
     read_mapping += CSRs.vstvec -> read_vstvec
   }
 
+  //yh+begin
+  val regDptConfig    	  = Reg(UInt(xLen.W))
+  val regWpbBase			    = Reg(UInt(xLen.W))
+  val regNumTagd          = Reg(UInt(xLen.W))
+  val regNumXtag          = Reg(UInt(xLen.W))
+  val regNumStore         = Reg(UInt(xLen.W))
+  val regNumLoad          = Reg(UInt(xLen.W))
+  val regNumTaggedStore   = Reg(UInt(xLen.W))
+  val regNumTaggedLoad    = Reg(UInt(xLen.W))
+  val regNumInst          = Reg(UInt(xLen.W))
+  val regLdstTraffic   		= Reg(UInt(xLen.W))
+  val regBoundsTraffic 		= Reg(UInt(xLen.W))
+  val regNumStoreHit    	= Reg(UInt(xLen.W))
+  val regNumLoadHit    	  = Reg(UInt(xLen.W))
+  val regNumCstr          = Reg(UInt(xLen.W))
+  val regNumCclr          = Reg(UInt(xLen.W))
+  val regBoundsMargin     = Reg(UInt(xLen.W))
+  val regArenaEnd0     		= Reg(UInt(xLen.W))
+  val regArenaEnd1     		= Reg(UInt(xLen.W))
+  val regArenaEnd2     		= Reg(UInt(xLen.W))
+  val regArenaEnd3     		= Reg(UInt(xLen.W))
+  val regArenaEnd4     		= Reg(UInt(xLen.W))
+  val regArenaEnd5     		= Reg(UInt(xLen.W))
+  val regArenaEnd6     		= Reg(UInt(xLen.W))
+  val regArenaEnd7     		= Reg(UInt(xLen.W))
+  val regNumWays0     		= Reg(UInt(xLen.W))
+  val regNumWays1     		= Reg(UInt(xLen.W))
+  val regNumWays2     		= Reg(UInt(xLen.W))
+  val regNumWays3     		= Reg(UInt(xLen.W))
+  val regNumSlqItr     		= Reg(UInt(xLen.W))
+  val regNumSsqItr     		= Reg(UInt(xLen.W))
+  val regNumScqItr     		= Reg(UInt(xLen.W))
+ 
+  regDptConfig      		  := io.dpt_config.asUInt
+  regWpbBase			        := io.wpb_base.asUInt
+  regNumTagd              := io.num_tagd.asUInt 
+  regNumXtag              := io.num_xtag.asUInt 
+  regNumStore             := io.num_store.asUInt
+  regNumLoad              := io.num_load.asUInt
+  regNumTaggedStore       := io.num_tagged_store.asUInt
+  regNumTaggedLoad        := io.num_tagged_load.asUInt
+  regNumInst              := io.num_inst.asUInt 
+  regLdstTraffic          := io.ldst_traffic.asUInt
+  regBoundsTraffic        := io.bounds_traffic.asUInt
+  regNumStoreHit    	    := io.num_store_hit.asUInt
+  regNumLoadHit    		    := io.num_load_hit.asUInt
+  regNumCstr              := io.num_cstr.asUInt 
+  regNumCclr              := io.num_cclr.asUInt 
+  regBoundsMargin         := io.bounds_margin.asUInt
+  regArenaEnd0         		:= io.arena_end_0.asUInt
+  regArenaEnd1         		:= io.arena_end_1.asUInt
+  regArenaEnd2         		:= io.arena_end_2.asUInt
+  regArenaEnd3         		:= io.arena_end_3.asUInt
+  regArenaEnd4         		:= io.arena_end_4.asUInt
+  regArenaEnd5         		:= io.arena_end_5.asUInt
+  regArenaEnd6         		:= io.arena_end_6.asUInt
+  regArenaEnd7         		:= io.arena_end_7.asUInt
+  regNumWays0         		:= io.num_ways_0.asUInt
+  regNumWays1         		:= io.num_ways_1.asUInt
+  regNumWays2         		:= io.num_ways_2.asUInt
+  regNumWays3         		:= io.num_ways_3.asUInt
+  regNumSlqItr            := io.num_slq_itr.asUInt 
+  regNumSsqItr            := io.num_ssq_itr.asUInt 
+  regNumScqItr            := io.num_scq_itr.asUInt 
+
+  val dptConfigCSRId = 0x430
+  read_mapping += dptConfigCSRId -> regDptConfig
+  val wpbBaseCSRId = 0x431
+  read_mapping += wpbBaseCSRId -> regWpbBase
+  val numTagdCSRId = 0x432
+  read_mapping += numTagdCSRId -> regNumTagd
+  val numXtagCSRId = 0x433
+  read_mapping += numXtagCSRId -> regNumXtag
+  val numStoreCSRId = 0x434
+  read_mapping += numStoreCSRId -> regNumStore
+  val numLoadCSRId = 0x435
+  read_mapping += numLoadCSRId -> regNumLoad
+  val numTaggedStoreCSRId = 0x436
+  read_mapping += numTaggedStoreCSRId -> regNumTaggedStore
+  val numTaggedLoadCSRId = 0x437
+  read_mapping += numTaggedLoadCSRId -> regNumTaggedLoad
+  val numInstCSRId = 0x438
+  read_mapping += numInstCSRId -> regNumInst
+  val ldstTrafficCSRId = 0x439
+  read_mapping += ldstTrafficCSRId -> regLdstTraffic
+  val boundsTrafficCSRId = 0x43a
+  read_mapping += boundsTrafficCSRId -> regBoundsTraffic
+  val numStoreHitCSRId = 0x43b
+  read_mapping += numStoreHitCSRId -> regNumStoreHit
+  val numLoadHitCSRId = 0x43c
+  read_mapping += numLoadHitCSRId -> regNumLoadHit
+  val numCstrCSRId = 0x43d
+  read_mapping += numCstrCSRId -> regNumCstr
+  val numCclrCSRId = 0x43e
+  read_mapping += numCclrCSRId -> regNumCclr
+  val boundsMarginCSRId = 0x43f
+  read_mapping += boundsMarginCSRId -> regBoundsMargin
+  val arenaEnd0CSRId = 0x440
+  read_mapping += arenaEnd0CSRId -> regArenaEnd0
+  val arenaEnd1CSRId = 0x441
+  read_mapping += arenaEnd1CSRId -> regArenaEnd1
+  val arenaEnd2CSRId = 0x442
+  read_mapping += arenaEnd2CSRId -> regArenaEnd2
+  val arenaEnd3CSRId = 0x443
+  read_mapping += arenaEnd3CSRId -> regArenaEnd3
+  val arenaEnd4CSRId = 0x444
+  read_mapping += arenaEnd4CSRId -> regArenaEnd4
+  val arenaEnd5CSRId = 0x445
+  read_mapping += arenaEnd5CSRId -> regArenaEnd5
+  val arenaEnd6CSRId = 0x446
+  read_mapping += arenaEnd6CSRId -> regArenaEnd6
+  val arenaEnd7CSRId = 0x447
+  read_mapping += arenaEnd7CSRId -> regArenaEnd7
+  val numWays0CSRId = 0x448
+  read_mapping += numWays0CSRId -> regNumWays0
+  val numWays1CSRId = 0x449
+  read_mapping += numWays1CSRId -> regNumWays1
+  val numWays2CSRId = 0x44a
+  read_mapping += numWays2CSRId -> regNumWays2
+  val numWays3CSRId = 0x44b
+  read_mapping += numWays3CSRId -> regNumWays3
+  val numSlqItrCSRId = 0x44c
+  read_mapping += numSlqItrCSRId -> regNumSlqItr
+  val numSsqItrCSRId = 0x44d
+  read_mapping += numSsqItrCSRId -> regNumSsqItr
+  val numScqItrCSRId = 0x44e
+  read_mapping += numScqItrCSRId -> regNumScqItr
+  //yh+end
+
   // mimpid, marchid, and mvendorid are 0 unless overridden by customCSRs
   Seq(CSRs.mimpid, CSRs.marchid, CSRs.mvendorid).foreach(id => read_mapping.getOrElseUpdate(id, 0.U))
 
@@ -813,8 +975,8 @@ class CSRFile(
 
   val system_insn = io.rw.cmd === CSR.I
   val hlsv = Seq(HLV_B, HLV_BU, HLV_H, HLV_HU, HLV_W, HLV_WU, HLV_D, HSV_B, HSV_H, HSV_W, HSV_D, HLVX_HU, HLVX_WU)
-  val decode_table = Seq(        ECALL->       List(Y,N,N,N,N,N,N,N,N),
-                                 EBREAK->      List(N,Y,N,N,N,N,N,N,N),
+  val decode_table = Seq(        SCALL->       List(Y,N,N,N,N,N,N,N,N),
+                                 SBREAK->      List(N,Y,N,N,N,N,N,N,N),
                                  MRET->        List(N,N,Y,N,N,N,N,N,N),
                                  CEASE->       List(N,N,N,Y,N,N,N,N,N),
                                  WFI->         List(N,N,N,N,Y,N,N,N,N)) ++
@@ -826,10 +988,8 @@ class CSRFile(
     usingHypervisor.option(      HFENCE_VVMA-> List(N,N,N,N,N,N,Y,N,N)) ++
     usingHypervisor.option(      HFENCE_GVMA-> List(N,N,N,N,N,N,N,Y,N)) ++
     (if (usingHypervisor)        hlsv.map(_->  List(N,N,N,N,N,N,N,N,Y)) else Seq())
-  val insn_call :: insn_break :: insn_ret :: insn_cease :: insn_wfi :: _ :: _ :: _ :: _ :: Nil = {
-    val insn = ECALL.value.U | (io.rw.addr << 20)
-    DecodeLogic(insn, decode_table(0)._2.map(x=>X), decode_table).map(system_insn && _.asBool)
-  }
+  val insn_call :: insn_break :: insn_ret :: insn_cease :: insn_wfi :: _ :: _ :: _ :: _ :: Nil =
+    DecodeLogic(io.rw.addr << 20, decode_table(0)._2.map(x=>X), decode_table).map(system_insn && _.asBool)
 
   for (io_dec <- io.decode) {
     val addr = io_dec.inst(31, 20)
@@ -853,7 +1013,7 @@ class CSRFile(
     io_dec.fp_illegal := io.status.fs === 0 || reg_mstatus.v && reg_vsstatus.fs === 0 || !reg_misa('f'-'a')
     io_dec.vector_illegal := io.status.vs === 0 || reg_mstatus.v && reg_vsstatus.vs === 0 || !reg_misa('v'-'a')
     io_dec.fp_csr := decodeFast(fp_csrs.keys.toList)
-    io_dec.rocc_illegal := io.status.xs === 0 || reg_mstatus.v && reg_vsstatus.xs === 0 || !reg_misa('x'-'a')
+    io_dec.rocc_illegal := io.status.xs === 0 || reg_mstatus.v && reg_vsstatus.vs === 0 || !reg_misa('x'-'a')
     val csr_addr_legal = reg_mstatus.prv >= CSR.mode(addr) ||
       usingHypervisor && !reg_mstatus.v && reg_mstatus.prv === PRV.S && CSR.mode(addr) === PRV.H
     val csr_exists = decodeAny(read_mapping)
@@ -1215,10 +1375,10 @@ class CSRFile(
 
     if (usingNMI) {
       val new_mnstatus = new MNStatus().fromBits(wdata)
-      when (decoded_addr(CustomCSRs.mnscratch)) { reg_mnscratch := wdata }
-      when (decoded_addr(CustomCSRs.mnepc))     { reg_mnepc := formEPC(wdata) }
-      when (decoded_addr(CustomCSRs.mncause))   { reg_mncause := wdata & UInt((BigInt(1) << (xLen-1)) + BigInt(3)) }
-      when (decoded_addr(CustomCSRs.mnstatus))  {
+      when (decoded_addr(CSRs.mnscratch)) { reg_mnscratch := wdata }
+      when (decoded_addr(CSRs.mnepc))     { reg_mnepc := formEPC(wdata) }
+      when (decoded_addr(CSRs.mncause))   { reg_mncause := wdata & UInt((BigInt(1) << (xLen-1)) + BigInt(3)) }
+      when (decoded_addr(CSRs.mnstatus))  {
         reg_mnstatus.mpp := legalizePrivilege(new_mnstatus.mpp)
         reg_mnstatus.mpv := usingHypervisor && new_mnstatus.mpv
         reg_rnmie := reg_rnmie | new_mnstatus.mie  // mnie bit settable but not clearable from software
@@ -1255,7 +1415,7 @@ class CSRFile(
         if (usingHypervisor) reg_dcsr.v := new_dcsr.v
       }
       when (decoded_addr(CSRs.dpc))      { reg_dpc := formEPC(wdata) }
-      when (decoded_addr(CSRs.dscratch0)) { reg_dscratch0 := wdata }
+      when (decoded_addr(CSRs.dscratch)) { reg_dscratch := wdata }
       reg_dscratch1.foreach { r =>
         when (decoded_addr(CSRs.dscratch1)) { r := wdata }
       }
@@ -1345,6 +1505,7 @@ class CSRFile(
         reg_vsstatus.sum := new_vsstatus.sum
         reg_vsstatus.fs := formFS(new_vsstatus.fs)
         reg_vsstatus.vs := formVS(new_vsstatus.vs)
+        if (usingRoCC) reg_vsstatus.xs := Fill(2, new_vsstatus.xs.orR)
       }
       when (decoded_addr(CSRs.vsip)) {
         val new_vsip = new MIP().fromBits((read_hip & ~read_hideleg) | ((wdata << 1) & read_hideleg))
@@ -1357,7 +1518,7 @@ class CSRFile(
           reg_vsatp.mode := new_vsatp.mode & satp_valid_modes.reduce(_|_)
         }
         when (mode_ok || !reg_mstatus.v) {
-          reg_vsatp.ppn := new_vsatp.ppn(vpnBits.min(new_vsatp.ppn.getWidth)-1,0)
+          reg_vsatp.ppn := new_vsatp.ppn(vpnBits-1,0)
         }
         if (asIdBits > 0) reg_vsatp.asid := new_vsatp.asid(asIdBits-1,0)
       }
@@ -1485,7 +1646,6 @@ class CSRFile(
   if (!(vmIdBits > 0)) {
     reg_hgatp.asid := 0.U
   }
-  reg_vsstatus.xs := (if (usingRoCC) UInt(3) else UInt(0))
 
   if (nBreakpoints <= 1) reg_tselect := 0
   for (bpc <- reg_bp map {_.control}) {

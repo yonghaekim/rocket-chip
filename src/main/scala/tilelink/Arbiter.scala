@@ -129,7 +129,7 @@ object TLArbiter
   }
 }
 
-// Synthesizable unit tests
+/** Synthesizeable unit tests */
 import freechips.rocketchip.unittest._
 
 abstract class DecoupledArbiterTest(
