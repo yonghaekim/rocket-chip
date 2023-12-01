@@ -121,7 +121,7 @@ object TLHintHandler
   }
 }
 
-// Synthesizable unit tests
+/** Synthesizeable unit tests */
 import freechips.rocketchip.unittest._
 
 //TODO ensure handler will pass through hints to clients that can handle them themselves

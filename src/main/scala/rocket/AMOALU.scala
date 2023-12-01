@@ -3,20 +3,19 @@
 
 package freechips.rocketchip.rocket
 
-import chisel3._
-import chisel3.util._
+import Chisel._
 import freechips.rocketchip.config.Parameters
 
 class StoreGen(typ: UInt, addr: UInt, dat: UInt, maxSize: Int) {
   val size = typ(log2Up(log2Up(maxSize)+1)-1,0)
-  def misaligned: Bool =
-    (addr & ((1.U << size) - 1.U)(log2Up(maxSize)-1,0)).orR
+  def misaligned =
+    (addr & ((UInt(1) << size) - UInt(1))(log2Up(maxSize)-1,0)).orR
 
   def mask = {
-    var res = 1.U
+    var res = UInt(1)
     for (i <- 0 until log2Up(maxSize)) {
-      val upper = Mux(addr(i), res, 0.U) | Mux(size >= (i+1).U, ((BigInt(1) << (1 << i))-1).U, 0.U)
-      val lower = Mux(addr(i), 0.U, res)
+      val upper = Mux(addr(i), res, UInt(0)) | Mux(size >= UInt(i+1), UInt((BigInt(1) << (1 << i))-1), UInt(0))
+      val lower = Mux(addr(i), UInt(0), res)
       res = Cat(upper, lower)
     }
     res
@@ -24,7 +23,7 @@ class StoreGen(typ: UInt, addr: UInt, dat: UInt, maxSize: Int) {
 
   protected def genData(i: Int): UInt =
     if (i >= log2Up(maxSize)) dat
-    else Mux(size === i.U, Fill(1 << (log2Up(maxSize)-i), dat((8 << i)-1,0)), genData(i+1))
+    else Mux(size === UInt(i), Fill(1 << (log2Up(maxSize)-i), dat((8 << i)-1,0)), genData(i+1))
 
   def data = genData(0)
   def wordData = genData(2)
@@ -38,9 +37,9 @@ class LoadGen(typ: UInt, signed: Bool, addr: UInt, dat: UInt, zero: Bool, maxSiz
     for (i <- log2Up(maxSize)-1 to logMinSize by -1) {
       val pos = 8 << i
       val shifted = Mux(addr(i), res(2*pos-1,pos), res(pos-1,0))
-      val doZero = (i == 0).B && zero
-      val zeroed = Mux(doZero, 0.U, shifted)
-      res = Cat(Mux(size === i.U || doZero, Fill(8*maxSize-pos, signed && zeroed(pos-1)), res(8*maxSize-1,pos)), zeroed)
+      val doZero = Bool(i == 0) && zero
+      val zeroed = Mux(doZero, UInt(0), shifted)
+      res = Cat(Mux(size === UInt(i) || doZero, Fill(8*maxSize-pos, signed && zeroed(pos-1)), res(8*maxSize-1,pos)), zeroed)
     }
     res
   }
@@ -53,24 +52,28 @@ class AMOALU(operandBits: Int)(implicit p: Parameters) extends Module {
   val minXLen = 32
   val widths = (0 to log2Ceil(operandBits / minXLen)).map(minXLen << _)
 
-  val io = IO(new Bundle {
-    val mask = Input(UInt((operandBits / 8).W))
-    val cmd = Input(UInt(M_SZ.W))
-    val lhs = Input(UInt(operandBits.W))
-    val rhs = Input(UInt(operandBits.W))
-    val out = Output(UInt(operandBits.W))
-    val out_unmasked = Output(UInt(operandBits.W))
-  })
+  val io = new Bundle {
+    val mask = UInt(INPUT, operandBits/8)
+    val cmd = Bits(INPUT, M_SZ)
+    val lhs = Bits(INPUT, operandBits)
+    val rhs = Bits(INPUT, operandBits)
+    val out = Bits(OUTPUT, operandBits)
+    val out_unmasked = Bits(OUTPUT, operandBits)
+  }
 
   val max = io.cmd === M_XA_MAX || io.cmd === M_XA_MAXU
   val min = io.cmd === M_XA_MIN || io.cmd === M_XA_MINU
   val add = io.cmd === M_XA_ADD
   val logic_and = io.cmd === M_XA_OR || io.cmd === M_XA_AND
   val logic_xor = io.cmd === M_XA_XOR || io.cmd === M_XA_OR
+  //yh+begin
+	val logic_cstr = io.cmd === M_XA_CSTR
+	val logic_cclr = io.cmd === M_XA_CCLR
+  //yh+end
 
   val adder_out = {
     // partition the carry chain to support sub-xLen addition
-    val mask = ~(0.U(operandBits.W) +: widths.init.map(w => !io.mask(w/8-1) << (w-1))).reduce(_|_)
+    val mask = ~(UInt(0, operandBits) +: widths.init.map(w => !io.mask(w/8-1) << (w-1))).reduce(_|_)
     (io.lhs & mask) + (io.rhs & mask)
   }
 
@@ -93,15 +96,48 @@ class AMOALU(operandBits: Int)(implicit p: Parameters) extends Module {
   }
 
   val minmax = Mux(Mux(less, min, max), io.lhs, io.rhs)
+  //yh-val logic =
+  //yh-  Mux(logic_and, io.lhs & io.rhs, 0.U) |
+  //yh-  Mux(logic_xor, io.lhs ^ io.rhs, 0.U)
+  //yh+begin
   val logic =
     Mux(logic_and, io.lhs & io.rhs, 0.U) |
-    Mux(logic_xor, io.lhs ^ io.rhs, 0.U)
+    Mux(logic_xor, io.lhs ^ io.rhs, 0.U) |
+    Mux(logic_cstr, Mux(io.lhs(40,0) === 0.U, io.rhs, io.lhs), 0.U) |
+    Mux(logic_cclr, Mux(io.lhs(40,0) === io.rhs(40,0), 0.U, io.lhs), 0.U)
+    //Mux(logic_cclr, Mux(io.lhs(40,0) === io.rhs(40,0) || io.rhs(40,0) === 0.U, 0.U, io.lhs), 0.U)
+		// TODO only vaddrBits need to be checked
+  //yh+end
   val out =
     Mux(add,                    adder_out,
-    Mux(logic_and || logic_xor, logic,
+    //yh-Mux(logic_and || logic_xor, logic,
+    Mux(logic_and || logic_xor || logic_cstr || logic_cclr, logic, //yh+
                                 minmax))
 
   val wmask = FillInterleaved(8, io.mask)
   io.out := wmask & out | ~wmask & io.lhs
   io.out_unmasked := out
+
+	//yh+begin
+	when (logic_cstr) {
+		printf("Found logic_cstr lhs: %x rhs: %x logic: %x\n", io.lhs, io.rhs, logic)
+	}
+
+	when (logic_cclr) {
+		printf("Found logic_cclr lhs: %x rhs: %x logic: %x\n", io.lhs, io.rhs, logic)
+	}
+
+	when (logic_and) {
+		printf("Found logic_and lhs: %x rhs: %x logic: %x\n", io.lhs, io.rhs, logic)
+	}
+
+	when (logic_xor) {
+		printf("Found logic_xor lhs: %x rhs: %x logic: %x\n", io.lhs, io.rhs, logic)
+	}
+	//yh+end
+	when (logic_cstr || logic_cclr || logic_and || logic_xor) {
+		printf("In AMO, out: %x out_unmasked: %x wmask: %x\n",
+					io.out, io.out_unmasked, wmask)
+	}
+	//yh+end
 }

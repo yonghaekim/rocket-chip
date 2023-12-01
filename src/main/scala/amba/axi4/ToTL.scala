@@ -54,16 +54,8 @@ case class AXI4ToTLNode(wcorrupt: Boolean)(implicit valName: ValName) extends Mi
     requestKeys    = (if (wcorrupt) Seq(AMBACorrupt) else Seq()) ++ mp.requestKeys.filter(_ != AMBAProt))
   })
 
-/**
-  * Convert AXI4 master to TileLink.
-  *
-  * You can use this adapter to connect external AXI4 masters to TileLink bus topology.
-  *
-  * Setting wcorrupt=true is insufficient to enable w.user.corrupt.
-  * One must additionally list it in the AXI4 master's requestFields.
-  *
-  * @param wcorrupt enable AMBACorrupt in w.user
-  */
+// Setting wcorrupt true is insufficient to enable w.user.corrupt
+// One must additionally provide list it in the AXI4 master's requestFields
 class AXI4ToTL(wcorrupt: Boolean)(implicit p: Parameters) extends LazyModule
 {
   val node = AXI4ToTLNode(wcorrupt)
