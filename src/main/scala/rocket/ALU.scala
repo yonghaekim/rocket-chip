@@ -98,10 +98,6 @@ class ALU(implicit p: Parameters) extends CoreModule()(p) {
 
   val out = Mux(io.fn === FN_ADD || io.fn === FN_SUB, io.adder_out,
                 Mux(io.fn === FN_XTAG, xtag_out, shift_logic))
-
-  //when (io.valid && io.fn === FN_XTAG) {
-  //  printf("YH+ [XTAG] io.in1: %x xtag_out: %x\n", io.in1, xtag_out)
-  //}
   //yh+end
 
   io.out := out

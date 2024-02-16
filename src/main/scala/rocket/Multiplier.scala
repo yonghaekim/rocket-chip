@@ -209,6 +209,10 @@ class PipelinedMultiplier(width: Int, latency: Int, nXpr: Int = 32) extends Modu
   //yh-io.resp.bits.data := Pipe(in.valid, muxed, latency-1).bits
 
 	//yh+begin
+  // This is Chisel implementation of QARMA
+  // written based on the C implementation of QARMA64:
+  // https://github.com/Phantom1003/QARMA64
+  // QARMA paper: https://eprint.iacr.org/2016/444.pdf
 	val w0 = WireInit(0x84be85ce9804e94bL.S(64.W))
 	val k0 = WireInit(0xec2802d4e0a488e9L.S(64.W))
 	val w1 = WireInit(0xc25f42e74c0274a4L.S(64.W))
@@ -619,49 +623,6 @@ class PipelinedMultiplier(width: Int, latency: Int, nXpr: Int = 32) extends Modu
 		cell2text(temp)
 	}
 
-	//def qarma64_enc(plaintext: UInt, tweak: UInt): UInt = {
-	//	// rounds = 5
-	//	var is_p0 = RegNext((plaintext ^ w0.asUInt).asUInt)
-	//	var tweak_p0 = RegNext(tweak)
-	//	printf("[TAGD] plaintext: %x w0: %x is_p0: %x tweak_p0: %x\n",
-	//					plaintext, w0.asUInt, is_p0, tweak_p0)
-
-	//	for (i <- 0 until 5) {
-	//		is_p0 = forward(is_p0, (k0.asUInt ^ tweak_p0 ^ c(i).asUInt), i)
-	//		tweak_p0 = forward_update_key(tweak_p0)
-	//		printf("[TAGD] is_p0: %x tweak_p0: %x\n", is_p0, tweak_p0)
-	//	}
-
-	//	var is_p1 = RegNext(is_p0)
-	//	var tweak_p1 = RegNext(tweak_p0)
-
-	//	is_p1 = forward(is_p1, w1.asUInt ^ tweak_p1, 1);
-	//	printf("[TAGD] is_p1: %x\n", is_p1)
-	//	is_p1 = pseudo_reflect(is_p1, k1.asUInt)
-	//	printf("[TAGD] is_p1: %x\n", is_p1)
-	//	is_p1 = backward(is_p1, w0.asUInt ^ tweak_p1, 1);
-	//	printf("[TAGD] is_p1: %x\n", is_p1)
-
-	//	var is_p2 = RegNext(is_p1)
-	//	var tweak_p2 = RegNext(tweak_p1)
-
-	//	for (i <- 0 until 5) {
-	//		tweak_p2 = backward_update_key(tweak_p2)
-	//		is_p2 = backward(is_p2, k0.asUInt ^ tweak_p2 ^ c(4-i).asUInt ^ alpha.asUInt, 4-i)
-	//		printf("[TAGD] is_p2: %x tweak_p2: %x\n", is_p2, tweak_p2)
-	//	}
-
-	//	is_p2 = (is_p2 ^ w1.asUInt)
-	//	//val pac16 = Mux(is_p2(15,0) === 0.U, 1.U, is_p2(15,0))
-	//	//RegNext(pac16)
-	//	printf("[TAGD] Return %x\n", RegNext(is_p2))
-	//	RegNext(is_p2)
-	//}
-
-	//when (in.bits.fn === FN_TAGD) {
-	//	printf("[TAGD] In multiplier, in1: %x in2: %x\n", in.bits.in1, in.bits.in2)
-	//}
-
 	assert(latency == 3)
 	val is_tagd = (io.req.valid & io.req.bits.fn === FN_TAGD)
 	val is_tagd_p3 = RegNext(RegNext(RegNext(is_tagd)))
@@ -671,7 +632,7 @@ class PipelinedMultiplier(width: Int, latency: Int, nXpr: Int = 32) extends Modu
 	val tweak_p0 = Reg(UInt(64.W))
 
 	when (is_tagd) {
-		is_p0 := io.req.bits.in1 ^ w0.asUInt
+		is_p0 := io.req.bits.in1(47,0) ^ w0.asUInt // ignore upper bits of pointer address
 		tweak_p0 := io.req.bits.in2
 
 		printf("[TAGD] is_tagd! in1: %x in2: %x w0: %x is_p0: %x tweak_p0: %x\n",
@@ -684,22 +645,14 @@ class PipelinedMultiplier(width: Int, latency: Int, nXpr: Int = 32) extends Modu
 	for (i <- 0 until 5) {
 		is_v0 = forward(is_v0, (k0.asUInt ^ tweak_v0 ^ c(i).asUInt), i)
 		tweak_v0 = forward_update_key(tweak_v0)
-		//printf("[TAGD] is_v0: %x tweak_v0: %x\n", is_v0, tweak_v0)
 	}
 
-	//val is_p1 = RegNext(is_p0)
-	//val tweak_p1 = RegNext(tweak_p0)
-	//var is_v1 = is_p1
-	//var tweak_v1 = tweak_p1
 	var is_v1 = is_v0
 	var tweak_v1 = tweak_v0
 
 	is_v1 = forward(is_v1, w1.asUInt ^ tweak_v1, 1);
-	//printf("[TAGD] is_v1: %x\n", is_v1)
 	is_v1 = pseudo_reflect(is_v1, k1.asUInt)
-	//printf("[TAGD] is_v1: %x\n", is_v1)
 	is_v1 = backward(is_v1, w0.asUInt ^ tweak_v1, 1);
-	//printf("[TAGD] is_v1: %x\n", is_v1)
 
 	val is_p2 = RegNext(is_v1)
 	val tweak_p2 = RegNext(tweak_v1)
@@ -709,34 +662,17 @@ class PipelinedMultiplier(width: Int, latency: Int, nXpr: Int = 32) extends Modu
 	for (i <- 0 until 5) {
 		tweak_v2 = backward_update_key(tweak_v2)
 		is_v2 = backward(is_v2, k0.asUInt ^ tweak_v2 ^ c(4-i).asUInt ^ alpha.asUInt, 4-i)
-		//printf("[TAGD] is_v2: %x tweak_v2: %x\n", is_v2, tweak_v2)
 	}
 
 	val pac = RegNext(is_v2 ^ w1.asUInt)
-
-	//val plaintext = Reg(SInt(64.W))
-	//plaintext := 0xfb623599da6e8127L.S
-
-	//val tweak = Reg(SInt(64.W))
-	//tweak := 0x477d469dec0b8762L.S
-
-	//val ciphertext = RegInit(0.U(64.W))
-	//when (ciphertext === 0.U) {
-	//	val c = qarma64_enc(plaintext.asUInt, tweak.asUInt)
-	//	ciphertext := c
-	//	
-	//	printf("plaintext: %x tweak: %x ciphertext: %x\n",
-	//					plaintext, tweak, c)
-	//}
-	//val pac = qarma64_enc(io.req.bits.in1.asUInt, io.req.bits.in2.asUInt)
 
   io.resp.bits.data := Mux(is_tagd_p3,
 												Cat(pac(15,0), resp.bits.in1(47,0)),
 												Pipe(in.valid, muxed, latency-1).bits)
 
-	when (is_tagd_p3) {
-		printf("[TAGD] io.resp.bits.data: %x pac: %x resp.bits.in1: %x resp.bits.in2: %x\n",
-						io.resp.bits.data, pac, resp.bits.in1, resp.bits.in2)
-	}
+	//when (is_tagd_p3) {
+	//	printf("[TAGD] io.resp.bits.data: %x pac: %x resp.bits.in1: %x resp.bits.in2: %x\n",
+	//					io.resp.bits.data, pac, resp.bits.in1, resp.bits.in2)
+	//}
 	//yh+end
 }

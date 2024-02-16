@@ -69,6 +69,7 @@ class AMOALU(operandBits: Int)(implicit p: Parameters) extends Module {
   //yh+begin
 	val logic_cstr = io.cmd === M_XA_CSTR
 	val logic_cclr = io.cmd === M_XA_CCLR
+	val logic_bext = io.cmd === M_XA_BEXT
   //yh+end
 
   val adder_out = {
@@ -104,40 +105,17 @@ class AMOALU(operandBits: Int)(implicit p: Parameters) extends Module {
     Mux(logic_and, io.lhs & io.rhs, 0.U) |
     Mux(logic_xor, io.lhs ^ io.rhs, 0.U) |
     Mux(logic_cstr, Mux(io.lhs(40,0) === 0.U, io.rhs, io.lhs), 0.U) |
-    Mux(logic_cclr, Mux(io.lhs(40,0) === io.rhs(40,0), 0.U, io.lhs), 0.U)
-    //Mux(logic_cclr, Mux(io.lhs(40,0) === io.rhs(40,0) || io.rhs(40,0) === 0.U, 0.U, io.lhs), 0.U)
+    Mux(logic_cclr, Mux(io.lhs(40,0) === io.rhs(40,0), 0.U, io.lhs), 0.U) |
+    Mux(logic_bext, io.lhs, 0.U)
 		// TODO only vaddrBits need to be checked
   //yh+end
   val out =
     Mux(add,                    adder_out,
     //yh-Mux(logic_and || logic_xor, logic,
-    Mux(logic_and || logic_xor || logic_cstr || logic_cclr, logic, //yh+
+    Mux(logic_and || logic_xor || logic_cstr || logic_cclr || logic_bext, logic, //yh+
                                 minmax))
 
   val wmask = FillInterleaved(8, io.mask)
   io.out := wmask & out | ~wmask & io.lhs
   io.out_unmasked := out
-
-	//yh+begin
-	when (logic_cstr) {
-		printf("Found logic_cstr lhs: %x rhs: %x logic: %x\n", io.lhs, io.rhs, logic)
-	}
-
-	when (logic_cclr) {
-		printf("Found logic_cclr lhs: %x rhs: %x logic: %x\n", io.lhs, io.rhs, logic)
-	}
-
-	when (logic_and) {
-		printf("Found logic_and lhs: %x rhs: %x logic: %x\n", io.lhs, io.rhs, logic)
-	}
-
-	when (logic_xor) {
-		printf("Found logic_xor lhs: %x rhs: %x logic: %x\n", io.lhs, io.rhs, logic)
-	}
-	//yh+end
-	when (logic_cstr || logic_cclr || logic_and || logic_xor) {
-		printf("In AMO, out: %x out_unmasked: %x wmask: %x\n",
-					io.out, io.out_unmasked, wmask)
-	}
-	//yh+end
 }

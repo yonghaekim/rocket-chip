@@ -299,19 +299,6 @@ class CSRFileIO(implicit p: Parameters) extends CoreBundle
   //yh+begin
   val dpt_config     		  = UInt(xLen.W).asInput
   val wpb_base     		    = UInt(xLen.W).asInput
-  val num_tagd            = UInt(xLen.W).asInput
-  val num_xtag            = UInt(xLen.W).asInput
-  val num_store           = UInt(xLen.W).asInput
-  val num_load            = UInt(xLen.W).asInput
-  val num_tagged_store    = UInt(xLen.W).asInput
-  val num_tagged_load     = UInt(xLen.W).asInput
-  val num_inst            = UInt(xLen.W).asInput
-  val ldst_traffic    	  = UInt(xLen.W).asInput
-  val bounds_traffic   	  = UInt(xLen.W).asInput
-  val num_store_hit  		  = UInt(xLen.W).asInput
-  val num_load_hit  		  = UInt(xLen.W).asInput
-  val num_cstr            = UInt(xLen.W).asInput
-  val num_cclr            = UInt(xLen.W).asInput
   val bounds_margin       = UInt(xLen.W).asInput
   val arena_end_0       	= UInt(xLen.W).asInput
   val arena_end_1       	= UInt(xLen.W).asInput
@@ -325,9 +312,6 @@ class CSRFileIO(implicit p: Parameters) extends CoreBundle
   val num_ways_1       		= UInt(xLen.W).asInput
   val num_ways_2       		= UInt(xLen.W).asInput
   val num_ways_3       		= UInt(xLen.W).asInput
-  val num_slq_itr         = UInt(xLen.W).asInput
-  val num_ssq_itr         = UInt(xLen.W).asInput
-  val num_scq_itr         = UInt(xLen.W).asInput
   //yh+end
 }
 
@@ -825,19 +809,6 @@ class CSRFile(
   //yh+begin
   val regDptConfig    	  = Reg(UInt(xLen.W))
   val regWpbBase			    = Reg(UInt(xLen.W))
-  val regNumTagd          = Reg(UInt(xLen.W))
-  val regNumXtag          = Reg(UInt(xLen.W))
-  val regNumStore         = Reg(UInt(xLen.W))
-  val regNumLoad          = Reg(UInt(xLen.W))
-  val regNumTaggedStore   = Reg(UInt(xLen.W))
-  val regNumTaggedLoad    = Reg(UInt(xLen.W))
-  val regNumInst          = Reg(UInt(xLen.W))
-  val regLdstTraffic   		= Reg(UInt(xLen.W))
-  val regBoundsTraffic 		= Reg(UInt(xLen.W))
-  val regNumStoreHit    	= Reg(UInt(xLen.W))
-  val regNumLoadHit    	  = Reg(UInt(xLen.W))
-  val regNumCstr          = Reg(UInt(xLen.W))
-  val regNumCclr          = Reg(UInt(xLen.W))
   val regBoundsMargin     = Reg(UInt(xLen.W))
   val regArenaEnd0     		= Reg(UInt(xLen.W))
   val regArenaEnd1     		= Reg(UInt(xLen.W))
@@ -851,25 +822,13 @@ class CSRFile(
   val regNumWays1     		= Reg(UInt(xLen.W))
   val regNumWays2     		= Reg(UInt(xLen.W))
   val regNumWays3     		= Reg(UInt(xLen.W))
-  val regNumSlqItr     		= Reg(UInt(xLen.W))
-  val regNumSsqItr     		= Reg(UInt(xLen.W))
-  val regNumScqItr     		= Reg(UInt(xLen.W))
+  val regNumWays4     		= Reg(UInt(xLen.W))
+  val regNumWays5     		= Reg(UInt(xLen.W))
+  val regNumWays6     		= Reg(UInt(xLen.W))
+  val regNumWays7     		= Reg(UInt(xLen.W))
  
   regDptConfig      		  := io.dpt_config.asUInt
   regWpbBase			        := io.wpb_base.asUInt
-  regNumTagd              := io.num_tagd.asUInt 
-  regNumXtag              := io.num_xtag.asUInt 
-  regNumStore             := io.num_store.asUInt
-  regNumLoad              := io.num_load.asUInt
-  regNumTaggedStore       := io.num_tagged_store.asUInt
-  regNumTaggedLoad        := io.num_tagged_load.asUInt
-  regNumInst              := io.num_inst.asUInt 
-  regLdstTraffic          := io.ldst_traffic.asUInt
-  regBoundsTraffic        := io.bounds_traffic.asUInt
-  regNumStoreHit    	    := io.num_store_hit.asUInt
-  regNumLoadHit    		    := io.num_load_hit.asUInt
-  regNumCstr              := io.num_cstr.asUInt 
-  regNumCclr              := io.num_cclr.asUInt 
   regBoundsMargin         := io.bounds_margin.asUInt
   regArenaEnd0         		:= io.arena_end_0.asUInt
   regArenaEnd1         		:= io.arena_end_1.asUInt
@@ -883,40 +842,11 @@ class CSRFile(
   regNumWays1         		:= io.num_ways_1.asUInt
   regNumWays2         		:= io.num_ways_2.asUInt
   regNumWays3         		:= io.num_ways_3.asUInt
-  regNumSlqItr            := io.num_slq_itr.asUInt 
-  regNumSsqItr            := io.num_ssq_itr.asUInt 
-  regNumScqItr            := io.num_scq_itr.asUInt 
 
   val dptConfigCSRId = 0x430
   read_mapping += dptConfigCSRId -> regDptConfig
   val wpbBaseCSRId = 0x431
   read_mapping += wpbBaseCSRId -> regWpbBase
-  val numTagdCSRId = 0x432
-  read_mapping += numTagdCSRId -> regNumTagd
-  val numXtagCSRId = 0x433
-  read_mapping += numXtagCSRId -> regNumXtag
-  val numStoreCSRId = 0x434
-  read_mapping += numStoreCSRId -> regNumStore
-  val numLoadCSRId = 0x435
-  read_mapping += numLoadCSRId -> regNumLoad
-  val numTaggedStoreCSRId = 0x436
-  read_mapping += numTaggedStoreCSRId -> regNumTaggedStore
-  val numTaggedLoadCSRId = 0x437
-  read_mapping += numTaggedLoadCSRId -> regNumTaggedLoad
-  val numInstCSRId = 0x438
-  read_mapping += numInstCSRId -> regNumInst
-  val ldstTrafficCSRId = 0x439
-  read_mapping += ldstTrafficCSRId -> regLdstTraffic
-  val boundsTrafficCSRId = 0x43a
-  read_mapping += boundsTrafficCSRId -> regBoundsTraffic
-  val numStoreHitCSRId = 0x43b
-  read_mapping += numStoreHitCSRId -> regNumStoreHit
-  val numLoadHitCSRId = 0x43c
-  read_mapping += numLoadHitCSRId -> regNumLoadHit
-  val numCstrCSRId = 0x43d
-  read_mapping += numCstrCSRId -> regNumCstr
-  val numCclrCSRId = 0x43e
-  read_mapping += numCclrCSRId -> regNumCclr
   val boundsMarginCSRId = 0x43f
   read_mapping += boundsMarginCSRId -> regBoundsMargin
   val arenaEnd0CSRId = 0x440
@@ -943,12 +873,6 @@ class CSRFile(
   read_mapping += numWays2CSRId -> regNumWays2
   val numWays3CSRId = 0x44b
   read_mapping += numWays3CSRId -> regNumWays3
-  val numSlqItrCSRId = 0x44c
-  read_mapping += numSlqItrCSRId -> regNumSlqItr
-  val numSsqItrCSRId = 0x44d
-  read_mapping += numSsqItrCSRId -> regNumSsqItr
-  val numScqItrCSRId = 0x44e
-  read_mapping += numScqItrCSRId -> regNumScqItr
   //yh+end
 
   // mimpid, marchid, and mvendorid are 0 unless overridden by customCSRs

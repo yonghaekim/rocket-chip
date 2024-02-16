@@ -37,45 +37,6 @@ class CustomCSRs(implicit p: Parameters) extends CoreBundle {
   protected def wpbBaseCSRId = 0x431
   protected def wpbBaseCSR: Option[CustomCSR] = None
 
-  protected def numTagdCSRId = 0x432
-  protected def numTagdCSR: Option[CustomCSR] = None
-
-  protected def numXtagCSRId = 0x433
-  protected def numXtagCSR: Option[CustomCSR] = None
-
-  protected def numStoreCSRId = 0x434
-  protected def numStoreCSR: Option[CustomCSR] = None
-
-  protected def numLoadCSRId = 0x435
-  protected def numLoadCSR: Option[CustomCSR] = None
-
-  protected def numTaggedStoreCSRId = 0x436
-  protected def numTaggedStoreCSR: Option[CustomCSR] = None
-
-  protected def numTaggedLoadCSRId = 0x437
-  protected def numTaggedLoadCSR: Option[CustomCSR] = None
-
-  protected def numInstCSRId = 0x438
-  protected def numInstCSR: Option[CustomCSR] = None
-
-  protected def ldstTrafficCSRId = 0x439
-  protected def ldstTrafficCSR: Option[CustomCSR] = None
-
-  protected def boundsTrafficCSRId = 0x43a
-  protected def boundsTrafficCSR: Option[CustomCSR] = None
-
-  protected def numStoreHitCSRId = 0x43b
-  protected def numStoreHitCSR: Option[CustomCSR] = None
-
-  protected def numLoadHitCSRId = 0x43c
-  protected def numLoadHitCSR: Option[CustomCSR] = None
-
-  protected def numCstrCSRId = 0x43d
-  protected def numCstrCSR: Option[CustomCSR] = None
-
-  protected def numCclrCSRId = 0x43e
-  protected def numCclrCSR: Option[CustomCSR] = None
-
   protected def boundsMarginCSRId = 0x43f
   protected def boundsMarginCSR: Option[CustomCSR] = None
 
@@ -115,30 +76,8 @@ class CustomCSRs(implicit p: Parameters) extends CoreBundle {
   protected def numWays3CSRId = 0x44b
   protected def numWays3CSR: Option[CustomCSR] = None
 
-  protected def numSlqItrCSRId = 0x44c
-  protected def numSlqItrCSR: Option[CustomCSR] = None
-
-  protected def numSsqItrCSRId = 0x44d
-  protected def numSsqItrCSR: Option[CustomCSR] = None
-
-  protected def numScqItrCSRId = 0x44e
-  protected def numScqItrCSR: Option[CustomCSR] = None
-
   def dpt_config       	  = getOrElse(dptConfigCSR, _.value, UInt(xLen.W))
   def wpb_base			  		= getOrElse(wpbBaseCSR, _.value, UInt(xLen.W))
-	def num_tagd						= getOrElse(numTagdCSR, _.value, UInt(xLen.W))
-	def num_xtag						= getOrElse(numXtagCSR, _.value, UInt(xLen.W))
-  def num_store           = getOrElse(numStoreCSR, _.value, UInt(xLen.W))
-  def num_load            = getOrElse(numLoadCSR, _.value, UInt(xLen.W))
-  def num_tagged_store    = getOrElse(numTaggedStoreCSR, _.value, UInt(xLen.W))
-  def num_tagged_load     = getOrElse(numTaggedLoadCSR, _.value, UInt(xLen.W))
-	def num_inst						= getOrElse(numInstCSR, _.value, UInt(xLen.W))
-  def ldst_traffic        = getOrElse(ldstTrafficCSR, _.value, UInt(xLen.W))
-  def bounds_traffic      = getOrElse(boundsTrafficCSR, _.value, UInt(xLen.W))
-  def num_store_hit       = getOrElse(numStoreHitCSR, _.value, UInt(xLen.W))
-  def num_load_hit        = getOrElse(numLoadHitCSR, _.value, UInt(xLen.W))
-	def num_cstr						= getOrElse(numCstrCSR, _.value, UInt(xLen.W))
-	def num_cclr						= getOrElse(numCclrCSR, _.value, UInt(xLen.W))
 	def bounds_margin				= getOrElse(boundsMarginCSR, _.value, UInt(xLen.W))
 	def arena_end_0				  = getOrElse(arenaEnd0CSR, _.value, UInt(xLen.W))
 	def arena_end_1				  = getOrElse(arenaEnd1CSR, _.value, UInt(xLen.W))
@@ -152,20 +91,12 @@ class CustomCSRs(implicit p: Parameters) extends CoreBundle {
 	def num_ways_1				  = getOrElse(numWays1CSR, _.value, UInt(xLen.W))
 	def num_ways_2				  = getOrElse(numWays2CSR, _.value, UInt(xLen.W))
 	def num_ways_3				  = getOrElse(numWays3CSR, _.value, UInt(xLen.W))
-	def num_slq_itr 			  = getOrElse(numSlqItrCSR, _.value, UInt(xLen.W))
-	def num_ssq_itr 			  = getOrElse(numSsqItrCSR, _.value, UInt(xLen.W))
-	def num_scq_itr 			  = getOrElse(numScqItrCSR, _.value, UInt(xLen.W))
 
   // If you override this, you'll want to concatenate super.decls
-  def decls: Seq[CustomCSR] = bpmCSR.toSeq ++ chickenCSR ++ dptConfigCSR ++ wpbBaseCSR ++
-																numTagdCSR ++ numXtagCSR ++ numStoreCSR ++ numLoadCSR ++
-																numTaggedStoreCSR ++ numTaggedLoadCSR ++ numInstCSR ++
-                                ldstTrafficCSR ++ boundsTrafficCSR ++
-                                numStoreHitCSR ++ numLoadHitCSR ++ numCstrCSR ++ numCclrCSR ++ boundsMarginCSR ++
+  def decls: Seq[CustomCSR] = bpmCSR.toSeq ++ chickenCSR ++ dptConfigCSR ++ wpbBaseCSR ++ boundsMarginCSR ++
                                 arenaEnd0CSR ++ arenaEnd1CSR ++ arenaEnd2CSR ++ arenaEnd3CSR ++ 
                                 arenaEnd4CSR ++ arenaEnd5CSR ++ arenaEnd6CSR ++ arenaEnd7CSR ++ 
-                                numWays0CSR ++ numWays1CSR ++ numWays2CSR ++ numWays3CSR ++
-                                numSlqItrCSR ++ numSsqItrCSR ++ numScqItrCSR
+                                numWays0CSR ++ numWays1CSR ++ numWays2CSR ++ numWays3CSR
   //yh+end
 
   val csrs = Vec(decls.size, new CustomCSRIO)

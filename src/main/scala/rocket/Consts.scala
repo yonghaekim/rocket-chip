@@ -79,10 +79,11 @@ trait MemoryOpConstants {
   //yh+begin
   def M_XA_CSTR = UInt("b11000");
   def M_XA_CCLR = UInt("b11001");
+  def M_XA_BEXT = UInt("b11010");
   //yh+end
 
   //yh-def isAMOLogical(cmd: UInt) = cmd.isOneOf(M_XA_SWAP, M_XA_XOR, M_XA_OR, M_XA_AND)
-  def isAMOLogical(cmd: UInt) = cmd.isOneOf(M_XA_SWAP, M_XA_XOR, M_XA_OR, M_XA_AND, M_XA_CSTR, M_XA_CCLR) //yh+
+  def isAMOLogical(cmd: UInt) = cmd.isOneOf(M_XA_SWAP, M_XA_XOR, M_XA_OR, M_XA_AND, M_XA_CSTR, M_XA_CCLR, M_XA_BEXT) //yh+
   def isAMOArithmetic(cmd: UInt) = cmd.isOneOf(M_XA_ADD, M_XA_MIN, M_XA_MAX, M_XA_MINU, M_XA_MAXU)
   def isAMO(cmd: UInt) = isAMOLogical(cmd) || isAMOArithmetic(cmd)
   def isPrefetch(cmd: UInt) = cmd === M_PFR || cmd === M_PFW
